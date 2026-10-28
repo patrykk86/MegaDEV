@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>#4471 · split into four problems · support kb</title>
+  <style>
+    :root {
+      --bg: #fbfaf7; --fg: #1d1d1b; --muted: #6b6a66; --line: #e3e0d8;
+      --accent: #2f6f5e; --warn: #b4501f; --warn-bg: #fbeee6; --note-bg: #eef5f2;
+      --mono: ui-monospace, 'Cascadia Code', Menlo, monospace;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #171716; --fg: #ecebe6; --muted: #9c9a93; --line: #34332f;
+        --accent: #6fbfa6; --warn: #f0905d; --warn-bg: #3a2418; --note-bg: #1d2c27;
+      }
+    }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.6 system-ui, sans-serif; }
+    .kb table { border-collapse: collapse; width: 100%; margin: 1rem 0; font-size: 0.92rem; }
+    .kb th, .kb td { border-bottom: 1px solid var(--line); padding: 0.35rem 0.5rem; text-align: left; }
+    .kb code { font-family: var(--mono); font-size: 0.88em; }
+    .kb a { color: var(--accent); }
+    .kb { max-width: 760px; margin: 0 auto; padding: 2rem 16px 4rem; }
+    .crumb { font: 0.8rem var(--mono); text-decoration: none; color: var(--muted); }
+    h1 { margin: 0.25rem 0 0.5rem; line-height: 1.2; }
+    .meta { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; color: var(--muted); font-size: 0.85rem; margin: 0; }
+    .status { border: 1px solid var(--line); border-radius: 99px; padding: 0 0.6rem; }
+    .stale { color: var(--warn); font-weight: 600; }
+    .sum { font-size: 1.1rem; }
+    .desc { font-size: 0.85em; color: var(--muted); margin-top: 0.2rem; }
+    .callout { background: var(--note-bg); border-left: 3px solid var(--accent); padding: 0.8rem 1rem; margin: 1rem 0; border-radius: 0 4px 4px 0; }
+    .stamp { margin: 2rem 0 0; font: 0.85rem var(--mono); color: var(--muted); }
+    .stamp b { color: var(--accent); letter-spacing: 0.04em; }
+    footer { margin-top: 3rem; font-size: 0.8rem; color: var(--muted); border-top: 1px solid var(--line); padding-top: 1rem; }
+  </style>
+</head>
+<body>
+  <div class="kb">
+    <header>
+      <a class="crumb" href="/kb">support desk · kb</a>
+      <h1>#4471 · split into four problems</h1>
+      <p class="meta">
+        <span>owner <b>support desk</b></span>
+        <span class="status open">open</span>
+        <span>reviewed 2026-10-28 · 0 days ago</span>
+      </p>
+    </header>
+    <main>
+      <p>The support desk originally merged incoming date reports under #4471 on subject line alone. Re-reading the queue separates them into four distinct technical issues with their own fixes.</p>
+      <div class="callout">
+        <p>Split by root cause. Each issue has its own ticket and report count.</p>
+      </div>
+      <h2>Distinct problems</h2>
+      <p class="sum">
+        <strong>412</strong> unique reports in #4471 · split into <strong>4</strong> distinct problems
+      </p>
+      <table>
+        <thead>
+          <tr>
+            <th>problem</th>
+            <th>reports</th>
+            <th>channels</th>
+            <th>tenants</th>
+            <th>seen</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <code>parser</code>
+              <div class="desc">Shared date parser reads month-first (MM/DD) in day-first locales</div>
+            </td>
+            <td><strong>374</strong></td>
+            <td>app, email, form</td>
+            <td>11</td>
+            <td>2026-04-01 → 2026-10-04</td>
+          </tr>
+          <tr>
+            <td>
+              <code>hint</code>
+              <div class="desc">booking-v3 form prints MM/DD/YYYY hint under day-first date field</div>
+            </td>
+            <td><strong>33</strong></td>
+            <td>form</td>
+            <td>3</td>
+            <td>2026-04-17 → 2026-09-22</td>
+          </tr>
+          <tr>
+            <td>
+              <code>day-shift</code>
+              <div class="desc">Timezone boundary shift moves bookings by one day</div>
+            </td>
+            <td><strong>4</strong></td>
+            <td>app, email</td>
+            <td>4</td>
+            <td>2026-04-02 → 2026-10-06</td>
+          </tr>
+          <tr>
+            <td>
+              <code>pre-booking</code>
+              <div class="desc">Invite delivered before booking timestamp</div>
+            </td>
+            <td><strong>1</strong></td>
+            <td>app</td>
+            <td>1</td>
+            <td>2026-04-14 → 2026-04-14</td>
+          </tr>
+        </tbody>
+      </table>
+      <h2>Why subject deduplication failed</h2>
+      <p>The earlier triage decision merged reports when their subject lines matched. For date bugs, reporters wrote similar subjects for completely different failure modes:</p>
+      <ul>
+        <li>The shared date parser reading month-first in European locales where day is written first.</li>
+        <li>The <code>booking-v3</code> form printing an <code>MM/DD/YYYY</code> format hint while parsing <code>DD/MM/YYYY</code>.</li>
+        <li>Timezone conversion shifts moving meetings across midnight boundaries by one day.</li>
+        <li>Clock skew / race conditions causing invite delivery timestamps to precede booking creation.</li>
+      </ul>
+      <p>Splitting #4471 into dedicated issues ensures engineering fixes each root cause independently.</p>
+      <p class="stamp">desk ref <b>DR-WVDG-XVD1</b></p>
+    </main>
+    <footer>Pages are written by people. Tables and charts are built from data at render time.</footer>
+  </div>
+</body>
+</html>
+
