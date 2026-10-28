@@ -6,3 +6,4 @@ See [`d:/MegaDEV/AGENTS.md`](../../AGENTS.md) for the canonical workspace operat
 3. **Node 25+ Tooling & Multi-Source Isolation**: Prefer fast native Node 25+ runtimes ([`tools/transcribe.mjs`](../../tools/transcribe.mjs), [`tools/hub-client.mjs`](../../tools/hub-client.mjs)) and enforce source isolation via [`multi-source-worker`](../skills/multi-source-worker/SKILL.md).
 4. **Account & Tool Isolation**: Isolate challenge deliverables to `patrykk86`; never invoke `github-mcp-server` or touch `bl8er` repositories.
 5. **Component Grounding**: Base all reported metrics and frontmatter on exported component views, keeping prose free of hardcoded numbers.
+6. **Contract-First & Evidence Logging**: Read declared endpoint schemas before sending payloads, and log all requests with masked secrets to `s01eXX/requests.log`.
