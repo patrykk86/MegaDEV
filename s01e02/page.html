@@ -1,0 +1,36 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta name="color-scheme" content="light dark"/><meta name="theme-color" content="#f4f3ee" media="(prefers-color-scheme: light)"/><meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)"/><meta name="mega-version" content="r567-ca2e1e0"/><link rel="icon" href="/icon.svg" type="image/svg+xml" sizes="any"/><script>(() => {
+  const key = "mega-theme";
+  const root = document.documentElement;
+  const system = window.matchMedia('(prefers-color-scheme: dark)');
+  const valid = (v) => ['light', 'dark', 'system'].includes(v) ? v : 'system';
+  let pref = 'system';
+  try { pref = valid(localStorage.getItem(key)); } catch (_) { /* storage may be blocked */ }
+  function apply() {
+    const theme = pref === 'system' ? (system.matches ? 'dark' : 'light') : pref;
+    root.dataset.theme = theme;
+    root.dataset.themePreference = pref;
+    root.style.colorScheme = theme;
+    document.querySelectorAll('meta[name="theme-color"]').forEach((m) => {
+      m.setAttribute('content', theme === 'dark' ? '#000000' : '#f4f3ee');
+    });
+    document.querySelectorAll('input[data-theme-option]').forEach((r) => {
+      r.checked = r.value === pref;
+    });
+    document.querySelectorAll('[data-theme-controls]').forEach((c) => { c.hidden = false; });
+  }
+  apply();
+  document.addEventListener('DOMContentLoaded', apply, { once: true });
+  document.addEventListener('change', (e) => {
+    const r = e.target instanceof HTMLInputElement && e.target.matches('[data-theme-option]') ? e.target : null;
+    if (!r) return;
+    pref = valid(r.value);
+    try { localStorage.setItem(key, pref); } catch (_) { /* keep switching in memory */ }
+    apply();
+  });
+  system.addEventListener('change', () => { if (pref === 'system') apply(); });
+  window.addEventListener('storage', (e) => {
+    if (e.key !== key && e.key !== null) return;
+    pref = valid(e.newValue);
+    apply();
+  });
+})();</script><title>MEGA · Sign in</title><link rel="preload" href="/assets/argent-pixel-CB_PadZC.woff2" as="font" type="font/woff2" crossorigin="anonymous"/><link rel="preload" href="/assets/geist-sans-C_ya05Eu.woff2" as="font" type="font/woff2" crossorigin="anonymous"/><link rel="preload" href="/assets/geist-mono-Dispecij.woff2" as="font" type="font/woff2" crossorigin="anonymous"/><link rel="stylesheet" href="/assets/app-DkZjgPol.css"/><script type="module" src="/assets/app-B4nbpphi.js"></script><script type="speculationrules">{"prefetch":[{"source":"document","where":{"and":[{"href_matches":["/","/deck","/lessons","/kickoff","/lessons/:slug","/lessons/:slug/","/challenges","/challenges/:slug","/admin-panel","/admin-panel/*","/wake/*"]},{"not":{"selector_matches":"[target], [download], [data-no-prefetch]"}}]},"eagerness":"conservative"}]}</script></head><body><a class="skip-link" href="#main">Skip to content</a><div class="gate-screen"><header class="site-header shell"><a class="brand" href="/" aria-label="MEGA.dev, home"><span class="brand-logo" aria-hidden="true"></span></a></header><main id="main" class="shell gate"><section class="gate-panel" aria-labelledby="gate-title"><p class="gate-strip" data-reveal-eager="1"><span>Step 1 of 3</span><span class="gate-strip-rule" aria-hidden="true"></span><span class="gate-strip-fact">Link works 15 minutes</span></p><h1 id="gate-title" data-reveal-eager="1">Sign in to MEGA</h1><div class="gate-body" data-reveal-eager="2"><p class="lead">Enter the email you enrolled with. We mail you a link that signs you in.</p><form method="post" action="/magic-link" class="login-form" data-send-link="true" data-problem-network="We could not reach MEGA. Check your connection, then try again." data-problem-server="Something went wrong on our side. Try again in a minute."><input type="hidden" name="next" value="/challenges/who-said-what"/><label for="login-email">Email</label><input id="login-email" type="email" name="email" required="" autofocus="" autocomplete="email" placeholder="you@example.com"/><button class="button button--accent" type="submit" id="login-submit"><span class="button-labels"><span class="button-idle">Email me the login link <span aria-hidden="true">→</span></span><span class="button-busy" aria-hidden="true">Sending…</span></span></button><p class="login-problem" id="login-problem" role="alert" hidden=""></p><span class="sr-only" role="status" data-send-link-status="true"></span></form></div><ol class="gate-steps" aria-label="Sign-in steps" data-reveal-eager="3"><li class="gate-step" data-s="now" aria-current="step"><span class="gate-step-n">01</span><span class="gate-step-text"><span class="gate-step-name">Email</span><span class="gate-step-detail">The address you enrolled with</span></span><span class="gate-step-word">Now</span></li><li class="gate-step" data-s="next"><span class="gate-step-n">02</span><span class="gate-step-text"><span class="gate-step-name">Inbox</span><span class="gate-step-detail">Open the mailed link in this browser</span></span><span class="gate-step-word"></span></li><li class="gate-step" data-s="next"><span class="gate-step-n">03</span><span class="gate-step-text"><span class="gate-step-name">Sign in</span><span class="gate-step-detail">Press the button on the page it opens</span></span><span class="gate-step-word"></span></li></ol></section><figure class="gate-cast artifact" data-reveal-eager="2"><div class="gate-cast-field texture texture--radial" data-field="quiet" aria-hidden="true"></div><ul class="gate-cast-plates"><li class="gate-cast-plate"><img src="https://res.cloudinary.com/mega-dev/image/upload/art/landing/program/theo-v2" alt="" width="933" height="933" decoding="async" data-dither-reveal="hover"/></li><li class="gate-cast-plate"><img src="https://res.cloudinary.com/mega-dev/image/upload/art/landing/program/angie-v2" alt="" width="933" height="933" decoding="async" data-dither-reveal="hover"/></li><li class="gate-cast-plate"><img src="https://res.cloudinary.com/mega-dev/image/upload/art/landing/program/kent-v2" alt="" width="933" height="933" decoding="async" data-dither-reveal="hover"/></li><li class="gate-cast-plate"><img src="https://res.cloudinary.com/mega-dev/image/upload/art/landing/program/john-v2" alt="" width="933" height="933" decoding="async" data-dither-reveal="hover"/></li></ul><figcaption class="gate-cast-names"><span class="gate-cast-name"><span class="gate-cast-week">01 Core</span>Theo Browne</span><span class="gate-cast-name"><span class="gate-cast-week">02 Agents</span>Angie Jones</span><span class="gate-cast-name"><span class="gate-cast-week">03 Product</span>Kent C. Dodds</span><span class="gate-cast-name"><span class="gate-cast-week">04 Takeoff</span>John Lindquist</span></figcaption></figure></main></div></body></html>

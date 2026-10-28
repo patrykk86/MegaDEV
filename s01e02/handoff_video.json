@@ -1,0 +1,334 @@
+{
+  "sourceId": "video",
+  "originFile": "crank-review-44a27487.mp4",
+  "clockReference": "UTC",
+  "clockOffsetHoursFromUtc": 0,
+  "findings": {
+    "batchStart": {
+      "rawSpokenTime": "01:50",
+      "format": "HH:MM",
+      "spokenOffsetSeconds": 42,
+      "utteranceIndex": 13
+    },
+    "firstReportArrival": {
+      "rawSpokenTime": "03:19",
+      "format": "HH:MM",
+      "spokenOffsetSeconds": 99,
+      "utteranceIndex": 28
+    }
+  },
+  "verbatimLines": [
+    "Summary for last night.",
+    "All times are UTC.",
+    "Service, calendar invites.",
+    "This summary covers the nightly batch for all changes.",
+    "Changes shipped before the batch, 1.",
+    "Other records for this night, not received.",
+    "Mode, read-only.",
+    "Dependency updates, none.",
+    "Nightly batch approved at 1:40.",
+    "Approvals, complete.",
+    "Pending approvals, none.",
+    "Notes for the next night, none.",
+    "Nightly batch started at 1:50.",
+    "Signatures, all changes signed.",
+    "Retries, none needed.",
+    "Warnings, none logged.",
+    "Owner notes, none attached.",
+    "Config drift, not detected.",
+    "Invites moved by shipped changes, 1,870.",
+    "Storage, within limits.",
+    "Coverage, unchanged.",
+    "Changes held back, none.",
+    "Nightly batch ended at 2:38.",
+    "Sync to partner calendars, complete.",
+    "Health checks, passing on every target.",
+    "Secret scan, nothing found.",
+    "Error budget, not touched.",
+    "First report from a user, received at 3:19.",
+    "Queue after batch, empty.",
+    "Next batch, tomorrow night at the usual time.",
+    "End of summary."
+  ],
+  "utterances": [
+    {
+      "index": 1,
+      "text": "Summary for last night.",
+      "start": 0,
+      "end": 3.9,
+      "duration": 3.9,
+      "spokenOffset": 0,
+      "timestamp": "00:00:00"
+    },
+    {
+      "index": 2,
+      "text": "All times are UTC.",
+      "start": 5.35,
+      "end": 7.2,
+      "duration": 1.85,
+      "spokenOffset": 5,
+      "timestamp": "00:00:05"
+    },
+    {
+      "index": 3,
+      "text": "Service, calendar invites.",
+      "start": 8.85,
+      "end": 10.9,
+      "duration": 2.05,
+      "spokenOffset": 9,
+      "timestamp": "00:00:08"
+    },
+    {
+      "index": 4,
+      "text": "This summary covers the nightly batch for all changes.",
+      "start": 11.65,
+      "end": 12.35,
+      "duration": 0.7,
+      "spokenOffset": 12,
+      "timestamp": "00:00:11"
+    },
+    {
+      "index": 5,
+      "text": "Changes shipped before the batch, 1.",
+      "start": 13.9,
+      "end": 16.15,
+      "duration": 2.25,
+      "spokenOffset": 14,
+      "timestamp": "00:00:13"
+    },
+    {
+      "index": 6,
+      "text": "Other records for this night, not received.",
+      "start": 17.45,
+      "end": 19.15,
+      "duration": 1.7,
+      "spokenOffset": 17,
+      "timestamp": "00:00:17"
+    },
+    {
+      "index": 7,
+      "text": "Mode, read-only.",
+      "start": 19.95,
+      "end": 20.4,
+      "duration": 0.45,
+      "spokenOffset": 20,
+      "timestamp": "00:00:19"
+    },
+    {
+      "index": 8,
+      "text": "Dependency updates, none.",
+      "start": 21.9,
+      "end": 23.85,
+      "duration": 1.95,
+      "spokenOffset": 22,
+      "timestamp": "00:00:21"
+    },
+    {
+      "index": 9,
+      "text": "Nightly batch approved at 1:40.",
+      "start": 24.95,
+      "end": 26.65,
+      "duration": 1.7,
+      "spokenOffset": 25,
+      "timestamp": "00:00:24"
+    },
+    {
+      "index": 10,
+      "text": "Approvals, complete.",
+      "start": 28,
+      "end": 31,
+      "duration": 3,
+      "spokenOffset": 28,
+      "timestamp": "00:00:28"
+    },
+    {
+      "index": 11,
+      "text": "Pending approvals, none.",
+      "start": 32.6,
+      "end": 36.45,
+      "duration": 3.85,
+      "spokenOffset": 33,
+      "timestamp": "00:00:32"
+    },
+    {
+      "index": 12,
+      "text": "Notes for the next night, none.",
+      "start": 37.8,
+      "end": 40.15,
+      "duration": 2.35,
+      "spokenOffset": 38,
+      "timestamp": "00:00:37"
+    },
+    {
+      "index": 13,
+      "text": "Nightly batch started at 1:50.",
+      "start": 41.55,
+      "end": 44.1,
+      "duration": 2.55,
+      "spokenOffset": 42,
+      "timestamp": "00:00:41"
+    },
+    {
+      "index": 14,
+      "text": "Signatures, all changes signed.",
+      "start": 45.55,
+      "end": 48.15,
+      "duration": 2.6,
+      "spokenOffset": 46,
+      "timestamp": "00:00:45"
+    },
+    {
+      "index": 15,
+      "text": "Retries, none needed.",
+      "start": 49.55,
+      "end": 51.45,
+      "duration": 1.9,
+      "spokenOffset": 50,
+      "timestamp": "00:00:49"
+    },
+    {
+      "index": 16,
+      "text": "Warnings, none logged.",
+      "start": 52.3,
+      "end": 53.95,
+      "duration": 1.65,
+      "spokenOffset": 52,
+      "timestamp": "00:00:52"
+    },
+    {
+      "index": 17,
+      "text": "Owner notes, none attached.",
+      "start": 55.5,
+      "end": 57.45,
+      "duration": 1.95,
+      "spokenOffset": 56,
+      "timestamp": "00:00:55"
+    },
+    {
+      "index": 18,
+      "text": "Config drift, not detected.",
+      "start": 59.1,
+      "end": 61.05,
+      "duration": 1.95,
+      "spokenOffset": 59,
+      "timestamp": "00:00:59"
+    },
+    {
+      "index": 19,
+      "text": "Invites moved by shipped changes, 1,870.",
+      "start": 62.75,
+      "end": 68.4,
+      "duration": 5.65,
+      "spokenOffset": 63,
+      "timestamp": "00:01:02"
+    },
+    {
+      "index": 20,
+      "text": "Storage, within limits.",
+      "start": 69.85,
+      "end": 71.55,
+      "duration": 1.7,
+      "spokenOffset": 70,
+      "timestamp": "00:01:09"
+    },
+    {
+      "index": 21,
+      "text": "Coverage, unchanged.",
+      "start": 72.85,
+      "end": 74.75,
+      "duration": 1.9,
+      "spokenOffset": 73,
+      "timestamp": "00:01:12"
+    },
+    {
+      "index": 22,
+      "text": "Changes held back, none.",
+      "start": 76.25,
+      "end": 78.3,
+      "duration": 2.05,
+      "spokenOffset": 76,
+      "timestamp": "00:01:16"
+    },
+    {
+      "index": 23,
+      "text": "Nightly batch ended at 2:38.",
+      "start": 79.65,
+      "end": 82.7,
+      "duration": 3.05,
+      "spokenOffset": 80,
+      "timestamp": "00:01:19"
+    },
+    {
+      "index": 24,
+      "text": "Sync to partner calendars, complete.",
+      "start": 84.2,
+      "end": 86.8,
+      "duration": 2.6,
+      "spokenOffset": 84,
+      "timestamp": "00:01:24"
+    },
+    {
+      "index": 25,
+      "text": "Health checks, passing on every target.",
+      "start": 88.35,
+      "end": 91.1,
+      "duration": 2.75,
+      "spokenOffset": 88,
+      "timestamp": "00:01:28"
+    },
+    {
+      "index": 26,
+      "text": "Secret scan, nothing found.",
+      "start": 92.35,
+      "end": 94.45,
+      "duration": 2.1,
+      "spokenOffset": 92,
+      "timestamp": "00:01:32"
+    },
+    {
+      "index": 27,
+      "text": "Error budget, not touched.",
+      "start": 95.85,
+      "end": 97.75,
+      "duration": 1.9,
+      "spokenOffset": 96,
+      "timestamp": "00:01:35"
+    },
+    {
+      "index": 28,
+      "text": "First report from a user, received at 3:19.",
+      "start": 99.4,
+      "end": 103.2,
+      "duration": 3.8,
+      "spokenOffset": 99,
+      "timestamp": "00:01:39"
+    },
+    {
+      "index": 29,
+      "text": "Queue after batch, empty.",
+      "start": 104.65,
+      "end": 106.75,
+      "duration": 2.1,
+      "spokenOffset": 105,
+      "timestamp": "00:01:44"
+    },
+    {
+      "index": 30,
+      "text": "Next batch, tomorrow night at the usual time.",
+      "start": 107.95,
+      "end": 111.55,
+      "duration": 3.6,
+      "spokenOffset": 108,
+      "timestamp": "00:01:47"
+    },
+    {
+      "index": 31,
+      "text": "End of summary.",
+      "start": 113,
+      "end": 113.95,
+      "duration": 0.95,
+      "spokenOffset": 113,
+      "timestamp": "00:01:53"
+    }
+  ]
+}

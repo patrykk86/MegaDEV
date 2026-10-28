@@ -1,0 +1,31 @@
+Summary for last night.
+All times are UTC.
+Service, calendar invites.
+This summary covers the nightly batch for all changes.
+Changes shipped before the batch, 1.
+Other records for this night, not received.
+Mode, read-only.
+Dependency updates, none.
+Nightly batch approved at 1:40.
+Approvals, complete.
+Pending approvals, none.
+Notes for the next night, none.
+Nightly batch started at 1:50.
+Signatures, all changes signed.
+Retries, none needed.
+Warnings, none logged.
+Owner notes, none attached.
+Config drift, not detected.
+Invites moved by shipped changes, 1,870.
+Storage, within limits.
+Coverage, unchanged.
+Changes held back, none.
+Nightly batch ended at 2:38.
+Sync to partner calendars, complete.
+Health checks, passing on every target.
+Secret scan, nothing found.
+Error budget, not touched.
+First report from a user, received at 3:19.
+Queue after batch, empty.
+Next batch, tomorrow night at the usual time.
+End of summary.

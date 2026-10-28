@@ -1,0 +1,28 @@
+Summary for last night.
+All times are local, plus 2 hours.
+Service, calendar invites.
+This summary covers the nightly batch for all regions.
+Nightly batch scheduled for 3:45.
+Queue before batch, normal.
+Workers ready, all.
+Nightly batch started at 3:50.
+Regions in scope, all.
+Time zone data, loaded.
+Calendar sync, running as planned.
+Invites moved, 2,140.
+Invites failed, none reported.
+Tests, passed.
+Skipped tests, none.
+Mail delivery, normal.
+Nightly batch ended at 4:38.
+State after batch, clean.
+Checks after batch, passed.
+Alerts raised, none.
+Rollbacks, none.
+First report from a user, received at 5:19.
+Reports since then, rising.
+Build, within limits.
+Other records for this night, not received.
+Support queue, open.
+Next batch, tomorrow night at the usual time.
+End of summary.

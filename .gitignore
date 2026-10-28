@@ -1,0 +1,12 @@
+# Root gitignore for MegaDEV workspace
+.env
+.env.*
+!.env.example
+.agents/mcp_config.json
+__pycache__/
+*.py[cod]
+*.log
+requests.log
+node_modules/
+# mega-examples is an independent cloned git repository (updated via `git -C mega-examples pull`)
+/mega-examples/

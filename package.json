@@ -1,0 +1,15 @@
+{
+  "name": "megadev-workspace",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Root workspace harness and static analysis suite for MegaDEV",
+  "type": "module",
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "check": "node tools/check.mjs",
+    "test": "node tools/check.mjs && node --test tools/transcribe.test.mjs",
+    "transcribe": "node tools/transcribe.mjs"
+  }
+}
