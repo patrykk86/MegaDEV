@@ -9,7 +9,7 @@
   },
   "scripts": {
     "check": "node tools/check.mjs",
-    "test": "node tools/check.mjs && node --test tools/transcribe.test.mjs",
+    "test": "node tools/check.mjs && node --test tools/transcribe.test.mjs && node --test .agents/skills/knowledge/scripts/check.test.ts .agents/skills/system-diff/scripts/check.test.mjs",
     "transcribe": "node tools/transcribe.mjs"
   }
 }
