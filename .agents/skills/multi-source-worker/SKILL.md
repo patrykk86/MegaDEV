@@ -16,6 +16,7 @@ When analyzing multiple recordings, feeds, or data sources (such as audio and vi
 
 For every distinct recording or data stream:
 1. **Assign a Dedicated Worker Context**:
+   - Launch a dedicated subagent (`invoke_subagent`) for each source (e.g. `Worker Video`, `Worker Audio`) to keep clock scopes strictly separated.
    - Each worker inspects and aligns only its assigned media/segments file and transcript.
    - Determine the source's native clock (`UTC`, `local+2h`, etc.) and integer `clockOffsetHoursFromUtc`.
 2. **Generate & Validate Standardized Hand-Off Files via CLI**:
@@ -79,3 +80,10 @@ Instead of concatenating transcripts manually in LLM context, run the CLI aggreg
 node tools/transcribe.mjs --aggregate handoff_video.json handoff_audio.json -o aggregated_record.json
 ```
 This verifies that all `sourceId`s are distinct, validates every handoff file against the schema, utterance text, and timestamp bounds, and outputs `combinedVerbatimLines` in exact order.
+
+---
+
+## 4. Cross-Session Handoff & Clock Anchors
+
+- **Verbatim Clock Anchors**: When combining multi-source verbatim transcripts into a single record for course evaluation, keep native clock header sentences (`All times are UTC.`, `All times are local...`) intact; they act as provenance anchors without failing word-for-word matching.
+- **Cross-Session Continuity**: When pausing for a new session (`resume-challenge`), verify all handoff files exist on disk before printing the resume prompt. The resuming session consumes the handoff directly and must not re-download raw media.
