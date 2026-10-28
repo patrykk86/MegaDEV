@@ -1,6 +1,6 @@
 ---
 layout: runbook
-title: '#4471 · split into four problems'
+title: '#4471 · split by cause'
 owner: support desk
 status: open
 reviewed: 2026-10-28
@@ -14,10 +14,10 @@ signature: v1.eyJzdWIiOiIxNTM2IiwiYXVkIjoiY2hhbGxlbmdlOndoYXQtaXQtc2hvd3MiLCJpYX
 </script>
 
 The support desk originally merged incoming date reports under #4471 on subject line alone.
-Re-reading the queue separates them into four distinct technical issues with their own fixes.
+Counting with the desk's exported rules separates them into distinct root causes with dedicated tickets.
 
 <Callout>
-Split by root cause. Each issue has its own ticket and report count.
+Split by cause. Each problem has its own ticket and report count.
 </Callout>
 
 ## Distinct problems
@@ -27,14 +27,11 @@ Split by root cause. Each issue has its own ticket and report count.
 ## Why subject deduplication failed
 
 The earlier triage decision merged reports when their subject lines matched. For date bugs,
-reporters wrote similar subjects for completely different failure modes:
+reporters wrote similar subjects for distinct failure modes:
 
 - The shared date parser reading month-first in European locales where day is written first.
 - The `booking-v3` form printing an `MM/DD/YYYY` format hint while parsing `DD/MM/YYYY`.
-- Timezone conversion shifts moving meetings across midnight boundaries by one day.
-- Clock skew / race conditions causing invite delivery timestamps to precede booking creation.
 
 Splitting #4471 into dedicated issues ensures engineering fixes each root cause independently.
 
 <RenderStamp {signature} />
-
