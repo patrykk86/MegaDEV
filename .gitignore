@@ -2,7 +2,7 @@
 .env
 .env.*
 !.env.example
-.agents/mcp_config.json
+.agents/
 __pycache__/
 *.py[cod]
 *.log
