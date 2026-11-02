@@ -1,0 +1,105 @@
+{
+  "sources": [
+    {
+      "sourceId": "video",
+      "originFile": "crank-review-44a27487.mp4",
+      "clockReference": "UTC",
+      "clockOffsetHoursFromUtc": 0,
+      "findings": {
+        "batchStart": {
+          "rawSpokenTime": "01:50",
+          "format": "HH:MM",
+          "spokenOffsetSeconds": 42,
+          "utteranceIndex": 13
+        },
+        "firstReportArrival": {
+          "rawSpokenTime": "03:19",
+          "format": "HH:MM",
+          "spokenOffsetSeconds": 99,
+          "utteranceIndex": 28
+        }
+      }
+    },
+    {
+      "sourceId": "audio",
+      "originFile": "status-line-a3be6d7b.mp3",
+      "clockReference": "local+2h",
+      "clockOffsetHoursFromUtc": 2,
+      "findings": {
+        "batchStart": {
+          "rawSpokenTime": "03:50",
+          "format": "HH:MM",
+          "spokenOffsetSeconds": 30,
+          "utteranceIndex": 8
+        },
+        "firstReportArrival": {
+          "rawSpokenTime": "05:19",
+          "format": "HH:MM",
+          "spokenOffsetSeconds": 91,
+          "utteranceIndex": 22
+        }
+      }
+    }
+  ],
+  "combinedVerbatimLines": [
+    "Summary for last night.",
+    "All times are UTC.",
+    "Service, calendar invites.",
+    "This summary covers the nightly batch for all changes.",
+    "Changes shipped before the batch, 1.",
+    "Other records for this night, not received.",
+    "Mode, read-only.",
+    "Dependency updates, none.",
+    "Nightly batch approved at 1:40.",
+    "Approvals, complete.",
+    "Pending approvals, none.",
+    "Notes for the next night, none.",
+    "Nightly batch started at 1:50.",
+    "Signatures, all changes signed.",
+    "Retries, none needed.",
+    "Warnings, none logged.",
+    "Owner notes, none attached.",
+    "Config drift, not detected.",
+    "Invites moved by shipped changes, 1,870.",
+    "Storage, within limits.",
+    "Coverage, unchanged.",
+    "Changes held back, none.",
+    "Nightly batch ended at 2:38.",
+    "Sync to partner calendars, complete.",
+    "Health checks, passing on every target.",
+    "Secret scan, nothing found.",
+    "Error budget, not touched.",
+    "First report from a user, received at 3:19.",
+    "Queue after batch, empty.",
+    "Next batch, tomorrow night at the usual time.",
+    "End of summary.",
+    "Summary for last night.",
+    "All times are local, plus 2 hours.",
+    "Service, calendar invites.",
+    "This summary covers the nightly batch for all regions.",
+    "Nightly batch scheduled for 3:45.",
+    "Queue before batch, normal.",
+    "Workers ready, all.",
+    "Nightly batch started at 3:50.",
+    "Regions in scope, all.",
+    "Time zone data, loaded.",
+    "Calendar sync, running as planned.",
+    "Invites moved, 2,140.",
+    "Invites failed, none reported.",
+    "Tests, passed.",
+    "Skipped tests, none.",
+    "Mail delivery, normal.",
+    "Nightly batch ended at 4:38.",
+    "State after batch, clean.",
+    "Checks after batch, passed.",
+    "Alerts raised, none.",
+    "Rollbacks, none.",
+    "First report from a user, received at 5:19.",
+    "Reports since then, rising.",
+    "Build, within limits.",
+    "Other records for this night, not received.",
+    "Support queue, open.",
+    "Next batch, tomorrow night at the usual time.",
+    "End of summary."
+  ]
+}

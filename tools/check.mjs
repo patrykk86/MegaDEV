@@ -7,6 +7,8 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checkSkillOverlap, validateSkill } from './check-skills.mjs';
+import { validateSupportKb } from './kb-check.mjs';
 import { aggregateHandoffs, validateHandoffObject } from './transcribe.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -107,12 +109,55 @@ function checkSecretsAndIsolation(problems) {
   }
 }
 
+function checkSourceManifest(dir, problems) {
+  const mf = path.join(dir, 'sources.json');
+  if (!fs.existsSync(mf)) {
+    return;
+  }
+  const rel = (p) => path.relative(ROOT, p).replace(/\\/g, '/');
+  let data;
+  try {
+    data = JSON.parse(fs.readFileSync(mf, 'utf-8'));
+  } catch (err) {
+    problems.push(`${rel(mf)}: invalid JSON (${err.message})`);
+    return;
+  }
+  const sources = data.sources || [];
+  const ids = new Set();
+  const files = new Set();
+  const CLOCK_RE = /^(UTC|local[+-]\d{1,2}h)$/;
+  for (const s of sources) {
+    if (!s.sourceId || ids.has(s.sourceId)) {
+      problems.push(`${rel(mf)}: duplicate or empty sourceId "${s.sourceId}".`);
+    }
+    ids.add(s.sourceId);
+    if (files.has(s.originFile)) {
+      problems.push(`${rel(mf)}: originFile "${s.originFile}" claimed by multiple sources.`);
+    }
+    files.add(s.originFile);
+    if (!CLOCK_RE.test(s.clockReference ?? '')) {
+      problems.push(`${rel(mf)}: ${s.sourceId} clockReference "${s.clockReference}" not UTC|local±Nh.`);
+    }
+  }
+  const found = fs
+    .readdirSync(dir)
+    .filter((n) => /^handoff_.*\.json$/i.test(n))
+    .map((n) => n.replace(/^handoff_|\.json$/gi, ''));
+  for (const id of ids) {
+    if (!found.includes(id)) {
+      problems.push(`${rel(dir)}: missing handoff for declared source "${id}" (fail-closed).`);
+    }
+  }
+}
+
 function checkHandoffFiles(problems) {
   for (const entry of fs.readdirSync(ROOT, { withFileTypes: true })) {
     if (!entry.isDirectory() || !/^s\d\de\d\d$/i.test(entry.name)) {
       continue;
     }
     const dir = path.join(ROOT, entry.name);
+    checkSourceManifest(dir, problems);
+
     const handoffFiles = fs
       .readdirSync(dir)
       .filter((name) => /^handoff_.*\.json$/i.test(name))
@@ -147,6 +192,39 @@ function checkGitIgnore(problems) {
     } catch {
       problems.push(`${sensitive}: file is NOT ignored by git. Add it to .gitignore immediately.`);
     }
+  }
+}
+
+function checkSkills(problems) {
+  const skillsRoot = path.join(ROOT, '.agents', 'skills');
+  if (!fs.existsSync(skillsRoot)) {
+    return;
+  }
+  const skills = [];
+  for (const e of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
+    if (!e.isDirectory()) {
+      continue;
+    }
+    const sDir = path.join(skillsRoot, e.name);
+    validateSkill(sDir, problems);
+    const skPath = path.join(sDir, 'SKILL.md');
+    if (fs.existsSync(skPath)) {
+      const raw = fs.readFileSync(skPath, 'utf-8');
+      const m = raw.match(/^description:\s*(.+)$/m);
+      skills.push({ name: e.name, description: m ? m[1] : '' });
+    }
+  }
+  checkSkillOverlap(skills, problems);
+}
+
+function checkKnowledgeBase(problems) {
+  const kbRoot = path.join(ROOT, 'support-kb');
+  if (!fs.existsSync(kbRoot)) {
+    return;
+  }
+  const res = validateSupportKb(kbRoot);
+  if (!res.ok) {
+    problems.push(...res.errors);
   }
 }
 
@@ -198,8 +276,11 @@ function main() {
   const problems = [];
   checkCanonicalTools(problems);
   checkSecretsAndIsolation(problems);
+  checkSourceManifest(path.join(ROOT, 's01e02'), problems);
   checkHandoffFiles(problems);
   checkGitIgnore(problems);
+  checkSkills(problems);
+  checkKnowledgeBase(problems);
   checkMegaExamples(problems);
 
   if (problems.length > 0) {
@@ -212,7 +293,7 @@ function main() {
   }
 
   console.log(
-    '✓ Workspace static analysis passed (canonical tools, secret hygiene, multi-source handoffs, gitignore, mex check, tsc, biome).'
+    '✓ Workspace static analysis passed (canonical tools, secret hygiene, multi-source handoffs, gitignore, skills guard, support-kb contracts, mex check, tsc, biome).'
   );
 }
 

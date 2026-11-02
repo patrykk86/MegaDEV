@@ -1,24 +1,36 @@
 ---
 name: multi-source-worker
-description: >-
-  Use this skill whenever a challenge or task involves multiple media streams, recordings,
-  logs, or documents with disparate clocks, timezones, formats, or schemas (e.g., audio vs video in S01E02).
-  Enforces isolated subagents/workers per source with standardized hand-off files validated by tools/transcribe.mjs.
+description: Orchestrates isolated subagents and standardized hand-offs for multiple media streams, recordings, or logs with disparate clocks. Use when a task involves multi-stream or multi-clock recordings. Not for single-stream transcription; use tools/transcribe.mjs directly.
 ---
 
 # Multi-Source Worker Isolation & Hand-off Protocol
 
-When analyzing multiple recordings, feeds, or data sources (such as audio and video streams with separate clocks), **never blend multiple sources into a single script or un-isolated context**. `node tools/check.mjs` statically blocks scripts that reference both video and audio streams in the same file.
+When analyzing multiple recordings, feeds, or data sources (such as audio and video streams with separate clocks), **never blend multiple sources into a single script or un-isolated context**. `node tools/check.mjs` statically blocks scripts that reference multiple streams in the same file and enforces fail-closed manifest validation.
 
 ---
 
 ## 1. Core Operating Rule: One Worker per Source
 
 For every distinct recording or data stream:
+
+0. **Declare Source Manifest (`sources.json`)**:
+   In the challenge directory, create `sources.json` declaring all streams before launching workers:
+   ```json
+   {
+     "episode": "s01e02",
+     "sources": [
+       { "sourceId": "video", "originFile": "crank-review-44a27487.mp4", "clockReference": "UTC", "clockOffsetHoursFromUtc": 0 },
+       { "sourceId": "audio", "originFile": "status-line-a3be6d7b.mp3", "clockReference": "local+2h", "clockOffsetHoursFromUtc": 2 }
+     ]
+   }
+   ```
+   `node tools/check.mjs` validates `clockReference` syntax (`UTC|local±Nh`), matches offset values, and fails closed if any declared source lacks a handoff file.
+
 1. **Assign a Dedicated Worker Context**:
    - Launch a dedicated subagent (`invoke_subagent`) for each source (e.g. `Worker Video`, `Worker Audio`) to keep clock scopes strictly separated.
    - Each worker inspects and aligns only its assigned media/segments file and transcript.
    - Determine the source's native clock (`UTC`, `local+2h`, etc.) and integer `clockOffsetHoursFromUtc`.
+
 2. **Generate & Validate Standardized Hand-Off Files via CLI**:
    - Use `tools/transcribe.mjs` to align sentences (1-to-1 gap partitioning with micro-blip filtering; fails loudly if counts mismatch):
      ```bash
@@ -33,7 +45,7 @@ For every distinct recording or data stream:
        --finding "firstReportArrival=First report from a user" \
        --export-handoff handoff_<source_id>.json
      ```
-   - **Offset Rule**: `transcribe.mjs` computes `spokenOffsetSeconds` as `Math.round(utterance.start)` (matching the integer second accepted by the Challenge Hub, e.g., `41.55s -> 42`, `29.75s -> 30`). For long multi-clause utterances where the answer falls significantly after the utterance start, listen/verify against the audio that the offset corresponds to the spoken answer within `[start, end]`.
+   - **Offset Rule**: `transcribe.mjs` computes `spokenOffsetSeconds` as `Math.round(utterance.start)` (matching integer seconds accepted by the Challenge Hub). For long multi-clause utterances where the answer falls significantly after the utterance start, verify against the audio that the offset corresponds to the spoken answer within `[start, end]`.
    - Standalone schema, text-match, and offset bounds check:
      ```bash
      node tools/transcribe.mjs --validate-handoff handoff_<source_id>.json

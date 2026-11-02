@@ -1,0 +1,17 @@
+{
+  "owner": "own-c935e87253ad91eb",
+  "agents": {
+    "pulse": {
+      "wakes": "pulse",
+      "may": [
+        "answer"
+      ]
+    },
+    "test-writer": {
+      "wakes": "test",
+      "may": [
+        "test"
+      ]
+    }
+  }
+}

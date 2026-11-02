@@ -1,0 +1,18 @@
+{
+  "episode": "s01e02",
+  "sources": [
+    {
+      "sourceId": "video",
+      "originFile": "crank-review-44a27487.mp4",
+      "clockReference": "UTC",
+      "clockOffsetHoursFromUtc": 0
+    },
+    {
+      "sourceId": "audio",
+      "originFile": "status-line-a3be6d7b.mp3",
+      "clockReference": "local+2h",
+      "clockOffsetHoursFromUtc": 2
+    }
+  ]
+}
+

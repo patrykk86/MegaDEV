@@ -9,7 +9,8 @@
   },
   "scripts": {
     "check": "node tools/check.mjs",
-    "test": "node tools/check.mjs && node --test tools/transcribe.test.mjs && node --test .agents/skills/knowledge/scripts/check.test.ts .agents/skills/system-diff/scripts/check.test.mjs",
+    "mex": "npm --prefix mega-examples start --",
+    "test": "node tools/check.mjs && node --test tools/transcribe.test.mjs tools/check-skills.test.mjs tools/system-diff-build.test.mjs tools/sanitize.test.mjs tools/eval-skill.test.mjs tools/nightly-audit.test.mjs tools/model-limits.test.mjs && node --test .agents/skills/knowledge/scripts/check.test.ts .agents/skills/system-diff/scripts/check.test.mjs",
     "transcribe": "node tools/transcribe.mjs"
   }
 }
