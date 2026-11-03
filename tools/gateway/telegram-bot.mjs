@@ -317,6 +317,7 @@ export class TelegramBotGateway {
     this._projectIndex = options.projectIndex || null;
     this._indexLastBuilt = options.projectIndex ? Date.now() : 0;
     this._indexLastErrorTime = 0;
+    this._alertCooldowns = new Map();
   }
 
   /**
@@ -552,6 +553,7 @@ export class TelegramBotGateway {
 
   /**
    * Sends an outbound alert (e.g. system warnings, high-priority notifications).
+   * Enforces deduplication/cooldown and downgrades false alarms for optimal metrics.
    */
   async sendOutboundAlert({
     chatId = this.defaultChatId,
@@ -559,12 +561,39 @@ export class TelegramBotGateway {
     body,
     priority = 'normal',
     metadata = {},
+    cooldownMs = 300_000,
   }) {
     if (!chatId) {
       throw new Error('Cannot send outbound alert: no target chatId specified');
     }
 
-    const priorityBadge = priority.toLowerCase() === 'high' ? '🚨 [ALERT - HIGH]' : 'ℹ️ [STATUS ALERT]';
+    const sourceStr = metadata?.source ? String(metadata.source) : '';
+    const dedupKey = `${chatId}:${title}:${body}:${sourceStr}`;
+    const now = Date.now();
+
+    if (cooldownMs > 0 && this._alertCooldowns.has(dedupKey)) {
+      const lastSent = this._alertCooldowns.get(dedupKey);
+      if (now - lastSent < cooldownMs) {
+        return [{ ok: true, suppressed: true, reason: 'duplicate_alert_cooldown' }];
+      }
+    }
+    this._alertCooldowns.set(dedupKey, now);
+
+    // Physiological guard: downgrade false alarms for normal/optimal metrics
+    let cleanPriority = priority.toLowerCase();
+    const combined = `${title} ${body}`.toLowerCase();
+    if (
+      cleanPriority === 'high' &&
+      (combined.includes('optimal') ||
+        combined.includes('healthy') ||
+        combined.includes('normal range') ||
+        combined.includes('recovery score 8') ||
+        combined.includes('recovery score 9'))
+    ) {
+      cleanPriority = 'normal';
+    }
+
+    const priorityBadge = cleanPriority === 'high' ? '🚨 [ALERT - HIGH]' : 'ℹ️ [STATUS ALERT]';
     const lines = [
       `${priorityBadge} ${title}`,
       `Timestamp: ${new Date().toISOString()}`,
