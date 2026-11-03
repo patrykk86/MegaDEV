@@ -17,9 +17,11 @@ import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { DEFAULT_JOURNAL_PATH, appendJournalEntry, readJournalEntries } from './journal.mjs';
 import { indexDirectories, recallContext } from './memory/contextual-recall.mjs';
 import { resolveLimits } from './model-limits.mjs';
 import { createSuspension, loadSuspension, resolveSuspension } from './resumable-approval.mjs';
+import { redactOutbound } from './sanitize.mjs';
 
 const THIS_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_LIMITS_PATH = path.join(THIS_DIR, 'model-limits.json');
@@ -46,13 +48,105 @@ export function truncate(text, max = DEFAULT_RESULT_CHARS) {
   return s.length > max ? `${s.slice(0, max)}\n[truncated ${s.length - max} chars]` : s;
 }
 
+/**
+ * Canonical model tiers for dynamic agent routing.
+ */
+export const DEFAULT_ROUTER_CONFIG = {
+  lightweightModel: 'deepseek/deepseek-v4.1-flash-20260910',
+  reasoningModel: 'anthropic/claude-haiku-5.5-20261007',
+};
+
+export const SECURITY_SENSITIVE_PATTERN =
+  /\b(security|vulnerab|exploit|secret|credential|encrypt|auth\b|compliance|gdpr|phi|pii)\b/i;
+
+/**
+ * Simple router rule in the agent loop routing straightforward validation commands to a
+ * lightweight model while reserving larger reasoning models for architecture and complex code generation.
+ */
+export function routeModel(input, options = {}) {
+  const config = { ...DEFAULT_ROUTER_CONFIG, ...options };
+  if (options.explicitModel) {
+    return { model: options.explicitModel, category: 'explicit', reason: 'Explicit model requested' };
+  }
+
+  const rawText = typeof input === 'string' ? input : String(input?.query || input?.instruction || input?.command || '');
+  const text = rawText.slice(0, 4096);
+  const taskType = input?.taskType || options.taskType;
+
+  // Security-sensitive tasks must never downgrade to lightweight models
+  if (SECURITY_SENSITIVE_PATTERN.test(text)) {
+    return {
+      model: config.reasoningModel,
+      category: 'reasoning',
+      reason: 'Security-sensitive task routed to reasoning model for thorough analysis',
+    };
+  }
+
+  if (taskType === 'validation' || taskType === 'lightweight') {
+    return { model: config.lightweightModel, category: 'validation', reason: 'Explicit validation task type' };
+  }
+  if (taskType === 'reasoning' || taskType === 'architecture' || taskType === 'codegen') {
+    return { model: config.reasoningModel, category: 'reasoning', reason: 'Explicit reasoning task type' };
+  }
+
+  // Straightforward validation commands, static checks, tests, diffs, and health probes
+  const isValidation =
+    /^(node\s+(--test|tools[\\/]check\.mjs)|npm(\.cmd)?\s+(test|run\s+test|run\s+check)|git\s+(status|diff|log)|mex\s+check|tsc\b|biome\b|tools[\\/]check\.mjs|validate|verify|audit|lint|format|health-check)/i.test(
+      text.trim(),
+    ) ||
+    /\b(run\s+(tests?|checks?|lint|build)|verify\s+(tests?|code|types)|validate\s+handoff|check\s+status|health\s+check|check\.mjs)\b/i.test(
+      text,
+    );
+
+  if (isValidation) {
+    return {
+      model: config.lightweightModel,
+      category: 'validation',
+      reason: 'Routed to lightweight model for straightforward validation/command check',
+    };
+  }
+
+  return {
+    model: config.reasoningModel,
+    category: 'reasoning',
+    reason: 'Routed to reasoning model for architecture, multi-file changes or complex code generation',
+  };
+}
+
+/**
+ * Helper to inspect entries from the append-only journal during agent execution.
+ */
+export function inspectJournalEntries(options = {}) {
+  return readJournalEntries(options);
+}
+
+/**
+ * Creates an agent-callable inspection tool exposing the persistent journal ledger.
+ */
+export function createJournalInspectionTool(options = {}) {
+  const targetPath = options.journalPath ?? DEFAULT_JOURNAL_PATH;
+  return async function inspect_journal(args = {}) {
+    const limit = Math.max(1, Math.min(Number(args.limit) || 10, 50));
+    const entries = readJournalEntries({
+      journalPath: targetPath,
+      action_type: args.action_type,
+      actor_id: args.actor_id,
+      day: args.day,
+    });
+    const slice = entries.slice(-limit);
+    return JSON.stringify(slice);
+  };
+}
+
 function insideRoot(root, target) {
-  const rel = path.relative(path.resolve(root), path.resolve(root, String(target ?? '')));
-  return rel !== '' && !rel.startsWith('..') && !path.isAbsolute(rel);
+  const rootAbs = path.resolve(root);
+  const targetAbs = path.resolve(rootAbs, String(target ?? ''));
+  const rel = path.relative(rootAbs, targetAbs);
+  return rel !== '' && rel !== '.' && !rel.startsWith(`..${path.sep}`) && rel !== '..' && !path.isAbsolute(rel);
 }
 
 function checkPathArguments(args, root) {
-  for (const key of ['path', 'file', 'filePath', 'file_path']) {
+  for (const key of ['path', 'file', 'filePath', 'file_path', 'cwd', 'dir', 'directory', 'target', 'folder']) {
     const val = args[key];
     if (val === undefined) {
       continue;
@@ -88,7 +182,7 @@ export function guardToolCall(call, policy = {}) {
   const root = policy.root ?? process.cwd();
   const allow = policy.allowCommands ?? [];
   const args = call?.arguments ?? {};
-  
+
   const pathErr = checkPathArguments(args, root);
   if (pathErr) {
     return { block: true, reason: pathErr };
@@ -104,6 +198,37 @@ function asError(message) {
   return JSON.stringify({ error: message });
 }
 
+function recordToolJournal(ctx, effective, outcome, err) {
+  if (!ctx.journalToolCalls) {
+    return;
+  }
+  const isSuccess = !err;
+  const rawSummary = isSuccess
+    ? `Executed tool '${effective.name}' successfully`
+    : `Failed tool '${effective.name}': ${err?.message ?? String(err)}`;
+  const safeSummary = redactOutbound(rawSummary.replace(/[\r\n\t]/g, ' ').slice(0, 512));
+
+  try {
+    appendJournalEntry(
+      {
+        actor_id: ctx.actorId,
+        action_type: 'tool_call',
+        summary: safeSummary,
+        payload: {
+          tool: effective.name,
+          arguments: effective.arguments ?? {},
+          outcome: outcome ?? null,
+          error: err ? (err?.message ?? String(err)) : null,
+          success: isSuccess,
+        },
+      },
+      { journalPath: ctx.journalPath },
+    );
+  } catch (jErr) {
+    console.error(`[agent-loop] Journal append error: ${jErr?.message ?? String(jErr)}`);
+  }
+}
+
 async function executeToolCall(fn, effective, ctx, state) {
   try {
     const raw = await fn(effective.arguments ?? {}, { signal: ctx.signal });
@@ -114,9 +239,13 @@ async function executeToolCall(fn, effective, ctx, state) {
     } catch (hookErr) {
       console.error(`[agent-loop] afterTool hook error: ${hookErr?.message ?? String(hookErr)}`);
     }
-    return truncate(replaced ?? text, ctx.maxResultChars);
+    const finalOutcome = truncate(replaced ?? text, ctx.maxResultChars);
+    recordToolJournal(ctx, effective, finalOutcome, null);
+    return finalOutcome;
   } catch (err) {
-    return asError(err?.message ?? String(err));
+    const errText = asError(err?.message ?? String(err));
+    recordToolJournal(ctx, effective, null, err);
+    return errText;
   }
 }
 
@@ -174,7 +303,15 @@ function stepSignal(ctx) {
 }
 
 function result(end, text, state, step) {
-  return { end, text, steps: step, usage: state.usage, model: state.model, limits: state.limits };
+  return {
+    end,
+    text,
+    steps: step,
+    usage: state.usage,
+    model: state.model,
+    routing: state.routing ?? undefined,
+    limits: state.limits,
+  };
 }
 
 function createContext(options) {
@@ -196,6 +333,9 @@ function createContext(options) {
     budgetTokens: options.budgetTokens ?? Number.POSITIVE_INFINITY,
     schemas: options.toolSchemas ?? [],
     contextualRecall: options.contextualRecall,
+    journalToolCalls: options.journalToolCalls ?? (options.journal === true || Boolean(options.journalPath)),
+    journalPath: options.journalPath ?? DEFAULT_JOURNAL_PATH,
+    actorId: options.actorId ?? options.model ?? 'agent-loop',
   };
 }
 
@@ -410,18 +550,32 @@ export async function runAgent(options) {
   if (!options?.llm?.generate) {
     throw new Error('runAgent needs an llm adapter with generate()');
   }
-  const ctx = createContext(options);
+
+  let routing = null;
+  let selectedModel = options.model;
+  if (!selectedModel || options.autoRoute) {
+    routing = routeModel({ query: options.query, taskType: options.taskType }, options.routerConfig);
+    selectedModel = routing.model;
+  }
+
+  const effectiveOptions = {
+    ...options,
+    model: selectedModel,
+  };
+
+  const ctx = createContext(effectiveOptions);
   const state = {
-    model: options.model,
+    model: selectedModel,
+    routing,
     limits: ctx.limits,
     usage: 0,
     messages: [...(options.messages ?? []), { role: 'user', content: options.query }],
-    settings: { model: options.model, max_tokens: ctx.limits.maxOutputTokens },
+    settings: { model: selectedModel, max_tokens: ctx.limits.maxOutputTokens },
   };
 
   initContextualRecall(options, ctx, state);
-  const finish = createFinishCallback(options, ctx, state);
-  return runAgentLoop(1, state, ctx, options, finish);
+  const finish = createFinishCallback(effectiveOptions, ctx, state);
+  return runAgentLoop(1, state, ctx, effectiveOptions, finish);
 }
 
 function resolvePendingRecord(options, workspaceRoot) {

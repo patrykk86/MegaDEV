@@ -7,7 +7,15 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
-import { resumeAgent, runAgent, triggerLamarckAfterRun } from './agent-loop.mjs';
+import {
+  createJournalInspectionTool,
+  guardToolCall,
+  resumeAgent,
+  routeModel,
+  runAgent,
+  triggerLamarckAfterRun,
+} from './agent-loop.mjs';
+import { readJournalEntries, verifyJournalIntegrity } from './journal.mjs';
 import { buildIndex } from './memory/contextual-recall.mjs';
 
 test('triggerLamarckAfterRun: rejects invalid sessionId format', () => {
@@ -296,6 +304,177 @@ test('resumeAgent: handles rejection by returning rejection feedback to model', 
     assert.equal(executedTools.length, 0); // Must NOT execute!
     assert.ok(seenRejectionContent.includes('Tool execution rejected by user'));
     assert.ok(seenRejectionContent.includes('Users table cannot be deleted in production!'));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('routeModel: routes validation commands to lightweight model and architecture to reasoning model', () => {
+  // 1. Straightforward validation commands
+  const testCmd = routeModel('npm test');
+  assert.equal(testCmd.category, 'validation');
+  assert.equal(testCmd.model, 'deepseek/deepseek-v4.1-flash-20260910');
+
+  const checkCmd = routeModel('node tools/check.mjs');
+  assert.equal(checkCmd.category, 'validation');
+  assert.equal(checkCmd.model, 'deepseek/deepseek-v4.1-flash-20260910');
+
+  const gitStatusCmd = routeModel('git status');
+  assert.equal(gitStatusCmd.category, 'validation');
+  assert.equal(gitStatusCmd.model, 'deepseek/deepseek-v4.1-flash-20260910');
+
+  // 2. Explicit taskType
+  const explicitValidation = routeModel('examine system', { taskType: 'validation' });
+  assert.equal(explicitValidation.category, 'validation');
+
+  const explicitReasoning = routeModel('check system', { taskType: 'reasoning' });
+  assert.equal(explicitReasoning.category, 'reasoning');
+  assert.equal(explicitReasoning.model, 'anthropic/claude-haiku-5.5-20261007');
+
+  // 3. Architecture and complex code generation
+  const complexPrompt = routeModel('Refactor multi-channel gateway architecture and add distributed consensus');
+  assert.equal(complexPrompt.category, 'reasoning');
+  assert.equal(complexPrompt.model, 'anthropic/claude-haiku-5.5-20261007');
+
+  // 4. Security-sensitive tasks must NEVER downgrade to lightweight
+  const secAudit = routeModel('audit the authentication module and secret encryption');
+  assert.equal(secAudit.category, 'reasoning');
+  assert.equal(secAudit.model, 'anthropic/claude-haiku-5.5-20261007');
+});
+
+test('guardToolCall: blocks path escapes across all path arguments (cwd, dir, target)', () => {
+  const root = path.resolve('tools');
+  const allow = ['npm'];
+
+  // Valid internal call
+  const validCall = guardToolCall(
+    { name: 'read_file', arguments: { path: 'agent-loop.mjs' } },
+    { root, allowCommands: allow },
+  );
+  assert.equal(validCall.block, false);
+
+  // Escaping via path
+  const escapePath = guardToolCall(
+    { name: 'read_file', arguments: { path: '../../etc/passwd' } },
+    { root, allowCommands: allow },
+  );
+  assert.equal(escapePath.block, true);
+  assert.ok(escapePath.reason.includes('path outside workspace'));
+
+  // Escaping via cwd
+  const escapeCwd = guardToolCall(
+    { name: 'exec', arguments: { cwd: '../..', command: 'npm test' } },
+    { root, allowCommands: allow },
+  );
+  assert.equal(escapeCwd.block, true);
+  assert.ok(escapeCwd.reason.includes('path outside workspace'));
+
+  // Escaping via target
+  const escapeTarget = guardToolCall(
+    { name: 'scan', arguments: { target: '/var/log' } },
+    { root, allowCommands: allow },
+  );
+  assert.equal(escapeTarget.block, true);
+  assert.ok(escapeTarget.reason.includes('path outside workspace'));
+});
+
+test('runAgent: autoRoute dynamically selects model and records routing decision', async () => {
+  let capturedModel = null;
+  const mockLLM = {
+    generate: async (options) => {
+      capturedModel = options.model;
+      return { text: 'Validation passed cleanly.', toolCalls: [] };
+    },
+  };
+
+  const res = await runAgent({
+    autoRoute: true,
+    query: 'npm.cmd test -- --run',
+    llm: mockLLM,
+    limitsDoc: {
+      default: { maxSteps: 2, maxOutputTokens: 1000, timeoutMs: 5000 },
+      models: {
+        'deepseek/deepseek-v4.1-flash-20260910': { maxSteps: 10, maxOutputTokens: 2000, timeoutMs: 8000 },
+      },
+    },
+    autoLamarck: false,
+  });
+
+  assert.equal(res.end, 'answer');
+  assert.equal(res.routing?.category, 'validation');
+  assert.equal(res.model, 'deepseek/deepseek-v4.1-flash-20260910');
+  assert.equal(capturedModel, 'deepseek/deepseek-v4.1-flash-20260910');
+});
+
+test('runAgent: tool runner records tool calls, parameters, and outcomes into append-only journal', async () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'agent-journal-test-'));
+  const journalPath = path.join(tmpDir, 'journal.jsonl');
+
+  try {
+    const tools = {
+      compute_sum: ({ a, b }) => String(Number(a) + Number(b)),
+      inspect_journal: createJournalInspectionTool({ journalPath }),
+    };
+
+    let stepCount = 0;
+    const mockLLM = {
+      generate: async () => {
+        stepCount++;
+        if (stepCount === 1) {
+          return {
+            message: { role: 'assistant', content: 'Computing sum' },
+            toolCalls: [{ id: 'tc-1', name: 'compute_sum', arguments: { a: 15, b: 27 } }],
+          };
+        }
+        if (stepCount === 2) {
+          return {
+            message: { role: 'assistant', content: 'Inspecting journal ledger' },
+            toolCalls: [{ id: 'tc-2', name: 'inspect_journal', arguments: { limit: 5 } }],
+          };
+        }
+        return {
+          text: 'Finished calculations and verified ledger.',
+          toolCalls: [],
+        };
+      },
+    };
+
+    const res = await runAgent({
+      model: 'mock-model',
+      query: 'Add 15 and 27 then verify ledger',
+      tools,
+      llm: mockLLM,
+      journal: true,
+      journalPath,
+      limitsDoc: {
+        default: { maxSteps: 5, maxOutputTokens: 1000, timeoutMs: 5000 },
+        models: {},
+      },
+      autoLamarck: false,
+    });
+
+    assert.equal(res.end, 'answer');
+
+    // Verify journal file exists and has valid cryptographic SHA-256 integrity
+    const integrity = verifyJournalIntegrity(journalPath);
+    assert.equal(integrity.valid, true);
+    assert.equal(integrity.count, 2);
+
+    const entries = readJournalEntries({ journalPath });
+    assert.equal(entries.length, 2);
+
+    // Entry 1: compute_sum
+    assert.equal(entries[0].action_type, 'tool_call');
+    assert.equal(entries[0].payload.tool, 'compute_sum');
+    assert.deepEqual(entries[0].payload.arguments, { a: 15, b: 27 });
+    assert.equal(entries[0].payload.outcome, '42');
+    assert.equal(entries[0].payload.success, true);
+
+    // Entry 2: inspect_journal
+    assert.equal(entries[1].action_type, 'tool_call');
+    assert.equal(entries[1].payload.tool, 'inspect_journal');
+    assert.equal(entries[1].payload.success, true);
+    assert.ok(entries[1].payload.outcome.includes('compute_sum'));
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
