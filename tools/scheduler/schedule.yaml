@@ -1,0 +1,21 @@
+version: "1.0"
+timezone: "UTC"
+tasks:
+  - id: "nightly-audit"
+    name: "Nightly Workspace Audit"
+    cron: "0 20 * * *"
+    enabled: true
+    action: "audit"
+    description: "Runs nightly static analysis, secret scans, and writes audit report to .runs/audits"
+  - id: "memory-budget"
+    name: "Memory Rule Budget Enforcement"
+    cron: "0 20 * * *"
+    enabled: true
+    action: "memory_budget"
+    description: "Asserts AGENTS.md and memory stay within 20k token / 24KB limit"
+  - id: "challenge-lane"
+    name: "Challenge Lane Heartbeat Check"
+    cron: "0 20 * * *"
+    enabled: true
+    action: "lane_check"
+    description: "Checks rig lane heartbeat and active lane status"

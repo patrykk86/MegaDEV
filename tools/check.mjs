@@ -195,6 +195,8 @@ function checkGitIgnore(problems) {
   }
 }
 
+const VENDOR_SKILLS = new Set(['rig', 'keep', 'read', 'rook-loop']);
+
 function checkSkills(problems) {
   const skillsRoot = path.join(ROOT, '.agents', 'skills');
   if (!fs.existsSync(skillsRoot)) {
@@ -202,7 +204,7 @@ function checkSkills(problems) {
   }
   const skills = [];
   for (const e of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
-    if (!e.isDirectory()) {
+    if (!e.isDirectory() || VENDOR_SKILLS.has(e.name)) {
       continue;
     }
     const sDir = path.join(skillsRoot, e.name);

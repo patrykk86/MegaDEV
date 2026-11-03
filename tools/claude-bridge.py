@@ -20,12 +20,32 @@ if hasattr(sys.stdout, "reconfigure"):
 if hasattr(sys.stderr, "reconfigure"):
     sys.stderr.reconfigure(encoding="utf-8")
 
+def load_env_file(path: Path):
+    if not path.exists():
+        return
+    try:
+        with open(path, "r", encoding="utf-8", errors="replace") as f:
+            for line in f:
+                line = line.strip()
+                if not line or line.startswith("#"):
+                    continue
+                if "=" in line:
+                    k, v = line.split("=", 1)
+                    k = k.strip()
+                    v = v.strip().strip('"').strip("'")
+                    if k and k not in os.environ:
+                        os.environ[k] = v
+    except Exception:
+        pass
+
+this_dir = Path(__file__).resolve().parent
+load_env_file(this_dir.parent / ".env")
+
 def find_bridge_path():
     env_path = os.getenv("MEGADEV_BRIDGE_PATH")
     if env_path and Path(env_path).exists():
         return Path(env_path)
 
-    this_dir = Path(__file__).resolve().parent
     candidates = [
         Path(r"D:\Projekt Hajs\.agents\mcp_servers\worker_bridge.py"),
         this_dir.parent.parent / "Projekt Hajs" / ".agents" / "mcp_servers" / "worker_bridge.py",

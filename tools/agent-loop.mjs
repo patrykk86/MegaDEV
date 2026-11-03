@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * tools/agent-loop.mjs - Canonical guarded agent loop for MegaDEV (AGENTS.md section 7).
+ * tools/agent-loop.mjs - Canonical guarded agent loop for MegaDEV (AGENTS.md sections 7 & 8).
  *
  * Every agent loop in this workspace must run through runAgent(). It enforces, per model:
  * - maxSteps / maxOutputTokens / timeoutMs from tools/model-limits.json (mean * 1.5 of real usage)
@@ -10,13 +10,16 @@
  * - hooks return decisions: beforeTool -> { block, reason, call }, afterTool -> replacement result
  * - tool results are capped, cut answers (finish_reason "length") are reported, token budget,
  *   AbortSignal and a clean step-limit stop.
+ * - Section 8: Contextual recall pre-injection and durable resumable tool approvals.
  */
 
 import { spawn, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { indexDirectories, recallContext } from './memory/contextual-recall.mjs';
 import { resolveLimits } from './model-limits.mjs';
+import { createSuspension, loadSuspension, resolveSuspension } from './resumable-approval.mjs';
 
 const THIS_DIR = path.dirname(fileURLToPath(import.meta.url));
 export const DEFAULT_LIMITS_PATH = path.join(THIS_DIR, 'model-limits.json');
@@ -186,9 +189,13 @@ function createContext(options) {
     policy: options.policy ?? {},
     signal: options.signal,
     readOnlyTools: new Set(options.readOnlyTools ?? []),
+    approvalRequiredTools: new Set(options.approvalRequiredTools ?? []),
+    approvalPolicy: options.approvalPolicy,
+    approvalsDir: options.approvalsDir,
     maxResultChars: options.maxResultChars ?? DEFAULT_RESULT_CHARS,
     budgetTokens: options.budgetTokens ?? Number.POSITIVE_INFINITY,
     schemas: options.toolSchemas ?? [],
+    contextualRecall: options.contextualRecall,
   };
 }
 
@@ -296,20 +303,55 @@ function handleTerminalResponse(response, state, ctx, step) {
     : result('answer', response.text ?? '', state, step);
 }
 
-export async function runAgent(options) {
-  if (!options?.llm?.generate) {
-    throw new Error('runAgent needs an llm adapter with generate()');
+function initContextualRecall(options, ctx, state) {
+  if (!ctx.contextualRecall || !options.query) {
+    return;
   }
-  const ctx = createContext(options);
-  const state = {
-    model: options.model,
-    limits: ctx.limits,
-    usage: 0,
-    messages: [...(options.messages ?? []), { role: 'user', content: options.query }],
-    settings: { model: options.model, max_tokens: ctx.limits.maxOutputTokens },
-  };
+  let index = ctx.contextualRecall.index;
+  if (!index && Array.isArray(ctx.contextualRecall.corpusDirs)) {
+    index = indexDirectories(ctx.contextualRecall.corpusDirs, {
+      workspaceRoot: ctx.policy?.root ?? process.cwd(),
+    });
+  }
+  if (!index) {
+    return;
+  }
+  const recalled = recallContext(options.query, index, ctx.contextualRecall);
+  if (recalled.results.length > 0 && recalled.formattedPrompt) {
+    state.contextualRecall = recalled.results;
+    state.messages.unshift({ role: 'system', content: recalled.formattedPrompt });
+  }
+}
 
-  const finish = async (res) => {
+function checkApprovalSuspension(calls, state, ctx, options, step) {
+  for (const c of calls) {
+    const isRequired = ctx.approvalRequiredTools.has(c.name);
+    const policyResult = ctx.approvalPolicy?.(c, state);
+    if (isRequired || policyResult?.needsApproval) {
+      const prompt = policyResult?.prompt || `Tool "${c.name}" requires user approval before execution.`;
+      const suspension = createSuspension({
+        toolCall: c,
+        state: { ...state, step },
+        prompt,
+        sessionId: options.sessionId,
+        runId: options.runId,
+        approvalsDir: ctx.approvalsDir,
+        workspaceRoot: ctx.policy?.root ?? process.cwd(),
+      });
+      return {
+        ...result('suspended', `Execution suspended: tool "${c.name}" requires user approval (${suspension.approvalId})`, state, step),
+        approvalId: suspension.approvalId,
+        suspensionPath: suspension.filePath,
+        toolCall: c,
+        approvalPrompt: prompt,
+      };
+    }
+  }
+  return null;
+}
+
+function createFinishCallback(options, ctx, state) {
+  return async (res) => {
     if (options.autoLamarck !== false && res?.end === 'answer') {
       triggerLamarckAfterRun({
         workspaceRoot: ctx.policy?.root ?? process.cwd(),
@@ -324,8 +366,17 @@ export async function runAgent(options) {
     }
     return res;
   };
+}
 
-  for (let step = 1; step <= ctx.limits.maxSteps; step++) {
+async function executeStepTools(calls, state, ctx) {
+  const outputs = await runTools(state, calls, ctx);
+  for (let i = 0; i < calls.length; i++) {
+    state.messages.push({ role: 'tool', tool_call_id: calls[i].id, content: outputs[i] });
+  }
+}
+
+async function runAgentLoop(startStep, state, ctx, options, finish) {
+  for (let step = startStep; step <= ctx.limits.maxSteps; step++) {
     if (ctx.signal?.aborted) {
       return finish(result('aborted', 'Run aborted by caller.', state, step - 1));
     }
@@ -345,17 +396,91 @@ export async function runAgent(options) {
       return finish(result('budget', `Stopped: token budget ${ctx.budgetTokens} exceeded (${state.usage}).`, state, step));
     }
 
-    const outputs = await runTools(state, calls, ctx);
-    calls.forEach((call, i) => {
-      state.messages.push({ role: 'tool', tool_call_id: call.id, content: outputs[i] });
+    const suspended = checkApprovalSuspension(calls, state, ctx, options, step);
+    if (suspended) {
+      return finish(suspended);
+    }
+
+    await executeStepTools(calls, state, ctx);
+  }
+  return finish(result('step_limit', `Stopped at the step limit (${ctx.limits.maxSteps} steps) without a final answer.`, state, ctx.limits.maxSteps));
+}
+
+export async function runAgent(options) {
+  if (!options?.llm?.generate) {
+    throw new Error('runAgent needs an llm adapter with generate()');
+  }
+  const ctx = createContext(options);
+  const state = {
+    model: options.model,
+    limits: ctx.limits,
+    usage: 0,
+    messages: [...(options.messages ?? []), { role: 'user', content: options.query }],
+    settings: { model: options.model, max_tokens: ctx.limits.maxOutputTokens },
+  };
+
+  initContextualRecall(options, ctx, state);
+  const finish = createFinishCallback(options, ctx, state);
+  return runAgentLoop(1, state, ctx, options, finish);
+}
+
+function resolvePendingRecord(options, workspaceRoot) {
+  let record = loadSuspension(options.approvalId, {
+    approvalsDir: options.approvalsDir,
+    workspaceRoot,
+  });
+
+  if (options.decision) {
+    record = resolveSuspension(options.approvalId, {
+      decision: options.decision,
+      responder: options.responder ?? 'user',
+      feedback: options.feedback ?? '',
+      approvalsDir: options.approvalsDir,
+      workspaceRoot,
     });
   }
-  return finish(
-    result(
-      'step_limit',
-      `Stopped at the step limit (${ctx.limits.maxSteps} steps) without a final answer.`,
-      state,
-      ctx.limits.maxSteps
-    )
-  );
+
+  if (record.status !== 'approved' && record.status !== 'rejected') {
+    throw new Error(`Cannot resume execution for approval "${options.approvalId}": status is "${record.status}"`);
+  }
+  return record;
+}
+
+export async function resumeAgent(options) {
+  if (!options?.approvalId) {
+    throw new Error('resumeAgent requires an approvalId');
+  }
+  if (!options?.llm?.generate) {
+    throw new Error('resumeAgent needs an llm adapter with generate()');
+  }
+
+  const workspaceRoot = options.workspaceRoot ?? options.policy?.root ?? process.cwd();
+  const record = resolvePendingRecord(options, workspaceRoot);
+
+  const ctx = createContext(options);
+  const state = {
+    model: options.model ?? record.state.model,
+    limits: ctx.limits,
+    usage: record.state.usage ?? 0,
+    messages: [...record.state.messages],
+    settings: {
+      model: options.model ?? record.state.model,
+      max_tokens: ctx.limits.maxOutputTokens,
+      ...(record.state.settings ?? {}),
+    },
+  };
+
+  const finish = createFinishCallback(options, ctx, state);
+  if (record.status === 'approved') {
+    const toolOutput = await runTool(state, record.toolCall, ctx);
+    state.messages.push({ role: 'tool', tool_call_id: record.toolCall.id, content: toolOutput });
+  } else {
+    state.messages.push({
+      role: 'tool',
+      tool_call_id: record.toolCall.id,
+      content: JSON.stringify({ error: `Tool execution rejected by user: ${record.feedback || 'User denied permission'}` }),
+    });
+  }
+
+  return runAgentLoop((record.state.step ?? 1) + 1, state, ctx, options, finish);
 }

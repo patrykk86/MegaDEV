@@ -118,7 +118,7 @@ function checkDescription(d, rel, problems) {
 }
 
 function checkBody(body, rel, skillDir, problems) {
-  if (/<insert|TODO|TBD|FIXME|XXX>/.test(body)) {
+  if (/<(?:insert|TODO|TBD|FIXME|XXX)>/.test(body)) {
     problems.push(`${rel}: placeholder text in body`);
   }
   const lines = body.split(/\r?\n/).length;
@@ -163,7 +163,7 @@ export function validateSkill(skillDir, problems) {
 }
 
 export function checkSkillOverlap(skills, problems) {
-  const STOP = new Set(['the','a','an','and','or','for','to','of','in','on','with','when','use','this','that','is','are','it','as','by','from','not']);
+  const STOP = new Set(['the', 'a', 'an', 'and', 'or', 'for', 'to', 'of', 'in', 'on', 'with', 'when', 'use', 'this', 'that', 'is', 'are', 'it', 'as', 'by', 'from', 'not']);
   const toks = (s) => new Set(s.toLowerCase().match(/[a-z0-9-]+/g)?.filter((t) => !STOP.has(t)) ?? []);
   for (let i = 0; i < skills.length; i++) {
     for (let j = i + 1; j < skills.length; j++) {

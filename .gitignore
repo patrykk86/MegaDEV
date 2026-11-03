@@ -8,5 +8,16 @@ __pycache__/
 *.log
 requests.log
 node_modules/
+.audits/
+.runs/
+tools/gateway/node_modules
 # mega-examples is an independent cloned git repository (updated via `git -C mega-examples pull`)
 /mega-examples/
+# Challenge archives and extracted payloads
+*.zip
+*.tar.gz
+s[0-9][0-9]e[0-9][0-9]/*.zip
+s[0-9][0-9]e[0-9][0-9]/starter/
+s[0-9][0-9]e[0-9][0-9]/sessions/
+s[0-9][0-9]e[0-9][0-9]/sessions-archive.json
+s[0-9][0-9]e[0-9][0-9]/requests.log
