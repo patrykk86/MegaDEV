@@ -1,3 +1,3 @@
 @echo off
-node "d:\MegaDEV\tools\gateway\run-gateway.mjs"
+node "%~dp0..\gateway\run-gateway.mjs"
 

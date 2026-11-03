@@ -1,17 +1,29 @@
 Set WshShell = CreateObject("WScript.Shell")
 Set fso = CreateObject("Scripting.FileSystemObject")
 
-WshShell.CurrentDirectory = "d:\MegaDEV"
+scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
+toolsDir = fso.GetParentFolderName(scriptDir)
+rootDir = fso.GetParentFolderName(toolsDir)
 
-If Not fso.FolderExists("d:\MegaDEV\.runs") Then
-    fso.CreateFolder("d:\MegaDEV\.runs")
+WshShell.CurrentDirectory = rootDir
+
+runsDir = fso.BuildPath(rootDir, ".runs")
+servicesDir = fso.BuildPath(runsDir, "services")
+
+If Not fso.FolderExists(runsDir) Then
+    fso.CreateFolder(runsDir)
 End If
-If Not fso.FolderExists("d:\MegaDEV\.runs\services") Then
-    fso.CreateFolder("d:\MegaDEV\.runs\services")
+If Not fso.FolderExists(servicesDir) Then
+    fso.CreateFolder(servicesDir)
 End If
+
+backendCmd = fso.BuildPath(scriptDir, "start-backend.cmd")
+backendLog = fso.BuildPath(servicesDir, "backend.log")
+gatewayCmd = fso.BuildPath(scriptDir, "start-gateway.cmd")
+gatewayLog = fso.BuildPath(servicesDir, "gateway.log")
 
 ' 1. Start BioCore FastAPI Backend with log output to .runs/services/backend.log
-WshShell.Run "cmd.exe /c """"""d:\MegaDEV\tools\service\start-backend.cmd"""" > """"d:\MegaDEV\.runs\services\backend.log"""" 2>&1""", 0, False
+WshShell.Run "cmd.exe /c """"" & backendCmd & """ > """ & backendLog & """ 2>&1""", 0, False
 
 ' 2. Start MegaDEV Telegram Gateway with log output to .runs/services/gateway.log
-WshShell.Run "cmd.exe /c """"""d:\MegaDEV\tools\service\start-gateway.cmd"""" > """"d:\MegaDEV\.runs\services\gateway.log"""" 2>&1""", 0, False
+WshShell.Run "cmd.exe /c """"" & gatewayCmd & """ > """ & gatewayLog & """ 2>&1""", 0, False

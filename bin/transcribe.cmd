@@ -1,2 +1,2 @@
 @echo off
-node "d:\MegaDEV\tools\transcribe.mjs" %*
+node "%~dp0..\tools\transcribe.mjs" %*

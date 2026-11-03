@@ -109,8 +109,8 @@ describe('Layer 6: redactOutbound()', () => {
     const fakeTicket = ['v1', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9', 'signaturePart12345'].join('.');
     const fakeUuid = ['123e4567', 'e89b', '12d3', 'a456', '426614174000'].join('-');
     const fakeBearer = 'Bearer secretTokenValue987654321';
-    const winPath = 'C:\\Users\\patryk\\AppData\\Local\\secret.txt';
-    const unixPath = '/Users/patryk/.ssh/id_rsa';
+    const winPath = ['C:', 'Users', 'testuser', 'AppData', 'Local', 'secret.txt'].join('\\');
+    const unixPath = ['/Users', 'testuser', '.ssh', 'id_rsa'].join('/');
 
     const rawLog = [
       `Key: ${fakeOpenRouterKey}`,
@@ -127,7 +127,7 @@ describe('Layer 6: redactOutbound()', () => {
     assert.ok(!redacted.includes(fakeTicket));
     assert.ok(!redacted.includes(fakeUuid));
     assert.ok(!redacted.includes('secretTokenValue987654321'));
-    assert.ok(!redacted.includes('patryk'));
+    assert.ok(!redacted.includes('testuser'));
 
     assert.ok(redacted.includes('[REDACTED_API_KEY]'));
     assert.ok(redacted.includes('[REDACTED_TICKET]'));

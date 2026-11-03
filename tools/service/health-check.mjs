@@ -16,8 +16,14 @@ import { fileURLToPath } from 'node:url';
 import { loadGatewayEnv, TelegramBotGateway } from '../gateway/telegram-bot.mjs';
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
-const BIOCORE_PYTHON = 'd:\\Projekt Hajs\\biocore_ai\\biocore_backend\\venv\\Scripts\\python.exe';
-const BIOCORE_APP_DIR = 'd:\\Projekt Hajs\\biocore_ai\\biocore_backend';
+const SIBLING_BIOCORE_DIR = path.resolve(ROOT_DIR, '..', 'Projekt Hajs', 'biocore_ai', 'biocore_backend');
+const ALT_BIOCORE_DIR = path.resolve(ROOT_DIR, '..', 'biocore_ai', 'biocore_backend');
+const BIOCORE_APP_DIR =
+  process.env.BIOCORE_APP_DIR ||
+  (fs.existsSync(SIBLING_BIOCORE_DIR) ? SIBLING_BIOCORE_DIR : ALT_BIOCORE_DIR);
+const BIOCORE_PYTHON =
+  process.env.BIOCORE_PYTHON ||
+  path.resolve(BIOCORE_APP_DIR, 'venv', 'Scripts', 'python.exe');
 
 loadGatewayEnv();
 

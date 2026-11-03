@@ -47,7 +47,6 @@ def find_bridge_path():
         return Path(env_path)
 
     candidates = [
-        Path(r"D:\Projekt Hajs\.agents\mcp_servers\worker_bridge.py"),
         this_dir.parent.parent / "Projekt Hajs" / ".agents" / "mcp_servers" / "worker_bridge.py",
         this_dir.parent / ".agents" / "mcp_servers" / "worker_bridge.py",
     ]

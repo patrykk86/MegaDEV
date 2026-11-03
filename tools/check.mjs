@@ -195,6 +195,40 @@ function checkGitIgnore(problems) {
   }
 }
 
+function checkNoAbsolutePaths(problems) {
+  let trackedFiles = [];
+  try {
+    trackedFiles = execFileSync('git', ['ls-files'], { cwd: ROOT, encoding: 'utf-8' })
+      .split(/\r?\n/)
+      .filter(Boolean);
+  } catch {
+    return;
+  }
+
+  for (const rel of trackedFiles) {
+    if (rel === 'tools/check.mjs' || /\.(mp3|mp4|wav|pyc|woff2|exe|zip|tar\.gz)$/i.test(rel)) {
+      continue;
+    }
+    const fullPath = path.join(ROOT, rel);
+    if (!fs.existsSync(fullPath) || fs.statSync(fullPath).isDirectory()) {
+      continue;
+    }
+    const content = fs.readFileSync(fullPath, 'utf-8');
+    content.split(/\r?\n/).forEach((line, idx) => {
+      const cleaned = line
+        .replace(/https?:\/\/[^\s"'`<>]+/g, '')
+        .replace(/symbol:\/\/[^\s"'`<>]+/g, '')
+        .replace(/\\n|\\r|\\t/g, '');
+      const match = cleaned.match(/(?:^|[\s"'`(<])([a-zA-Z]:[\\/][^\s"'`<>]+|\/(?:home|Users)\/[^\s"'`<>]+)/);
+      if (match) {
+        problems.push(
+          `${rel}:${idx + 1}: Hardcoded absolute path detected ("${match[1]}"). Use relative paths or environment variables.`
+        );
+      }
+    });
+  }
+}
+
 const VENDOR_SKILLS = new Set(['rig', 'keep', 'read', 'rook-loop']);
 
 function checkSkills(problems) {
@@ -281,6 +315,7 @@ function main() {
   checkSourceManifest(path.join(ROOT, 's01e02'), problems);
   checkHandoffFiles(problems);
   checkGitIgnore(problems);
+  checkNoAbsolutePaths(problems);
   checkSkills(problems);
   checkKnowledgeBase(problems);
   checkMegaExamples(problems);
@@ -295,7 +330,7 @@ function main() {
   }
 
   console.log(
-    '✓ Workspace static analysis passed (canonical tools, secret hygiene, multi-source handoffs, gitignore, skills guard, support-kb contracts, mex check, tsc, biome).'
+    '✓ Workspace static analysis passed (canonical tools, secret hygiene, relative path invariant, multi-source handoffs, gitignore, skills guard, support-kb contracts, mex check, tsc, biome).'
   );
 }
 

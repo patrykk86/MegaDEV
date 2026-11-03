@@ -6,9 +6,9 @@
 
 ## 1. System Overview & Architecture
 
-**MegaDEV** (`d:/MegaDEV`) is an autonomous agent workspace built to eliminate common failure modes in LLM-assisted software development—such as prompt drift, hallucinated commands, unbounded retry loops, token exhaustion, and silent security leaks.
+**MegaDEV** is an autonomous agent workspace built to eliminate common failure modes in LLM-assisted software development—such as prompt drift, hallucinated commands, unbounded retry loops, token exhaustion, and silent security leaks.
 
-The workspace operates in tandem with **BioCore-AI** (`D:/Projekt Hajs/biocore_ai`), maintaining a strict boundary between project dependencies while sharing skills, model bridges, and gateway services.
+The workspace operates in tandem with **BioCore-AI** (sibling workspace `../biocore_ai` or `../Projekt Hajs/biocore_ai`), maintaining a strict boundary between project dependencies while sharing skills, model bridges, and gateway services.
 
 ```
                     ┌────────────────────────────────────────────────────────┐
@@ -151,7 +151,7 @@ Understanding the guardrails means understanding what the agent is **intentional
 2. **Fail-Closed Shell Execution**:
    Command chaining (`&&`, `||`, `;`), subshells (`$()`, backticks), and backgrounding (`&`) are blocked by the security policy. Every command must match an approved allowlist prefix.
 3. **Workspace Boundary Lockdown**:
-   Tools cannot traverse outside `d:/MegaDEV`. Any attempt to read or modify `.env*`, `.ssh`, or `*.pem` files is intercepted and blocked.
+   Tools cannot traverse outside the workspace root. Any attempt to read or modify `.env*`, `.ssh`, or `*.pem` files is intercepted and blocked.
 4. **Prototype Pollution Protection**:
    All tool dispatchers check `Object.hasOwn` to guard against prototype poisoning (`__proto__`, `constructor`).
 
@@ -191,7 +191,7 @@ npm run transcribe -- input.mp3 --sourceId audio-main
 ## 7. Directory Structure
 
 ```
-d:/MegaDEV/
+mega-dev/
 ├── .agents/               # Skills library and MCP server definitions
 ├── .runs/                 # Disk-backed task handoffs, audits, and journals
 ├── tools/

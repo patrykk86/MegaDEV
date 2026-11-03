@@ -4,7 +4,8 @@ echo Installing MegaDEV & BioCore 24/7 Background Services to Windows Startup
 echo ==============================================================
 
 set "TARGET_DIR=%APPDATA%\Microsoft\Windows\Start Menu\Programs\Startup"
-set "VBS_SCRIPT=d:\MegaDEV\tools\service\start-background-services.vbs"
+set "SCRIPT_DIR=%~dp0"
+set "VBS_SCRIPT=%SCRIPT_DIR%start-background-services.vbs"
 
 if not exist "%VBS_SCRIPT%" (
     echo Error: Could not find %VBS_SCRIPT%
@@ -25,7 +26,7 @@ if %ERRORLEVEL% EQU 0 (
     echo 3. 24 hours a day, 7 days a week without Antigravity needing to be open.
     echo.
     echo To start them right now without rebooting, run:
-    echo   wscript "d:\MegaDEV\tools\service\start-background-services.vbs"
+    echo   wscript "%SCRIPT_DIR%start-background-services.vbs"
 ) else (
     echo.
     echo [ERROR] Failed to copy script to Startup folder.

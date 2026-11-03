@@ -376,9 +376,13 @@ export class TelegramBotGateway {
       path.join(ROOT_DIR, '.runs', 'active-session.md'),
     ];
 
-    const extraCandidate =
-      process.env.GATEWAY_EXTRA_CORPUS ||
-      'd:/Projekt Hajs/AGENTS.md;d:/Projekt Hajs/.agents;d:/Projekt Hajs/biocore_ai';
+    const defaultExtra = [
+      path.resolve(ROOT_DIR, '..', 'Projekt Hajs', 'AGENTS.md'),
+      path.resolve(ROOT_DIR, '..', 'Projekt Hajs', '.agents'),
+      path.resolve(ROOT_DIR, '..', 'Projekt Hajs', 'biocore_ai'),
+      path.resolve(ROOT_DIR, '..', 'biocore_ai'),
+    ].join(';');
+    const extraCandidate = process.env.GATEWAY_EXTRA_CORPUS || defaultExtra;
     const extraPaths = extraCandidate
       .split(/[;,]/)
       .map((p) => p.trim())
