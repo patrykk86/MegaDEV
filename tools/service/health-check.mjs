@@ -13,7 +13,6 @@ import { spawn } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { loadGatewayEnv, TelegramBotGateway } from '../gateway/telegram-bot.mjs';
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const SIBLING_BIOCORE_DIR = path.resolve(ROOT_DIR, '..', 'Projekt Hajs', 'biocore_ai', 'biocore_backend');
@@ -24,8 +23,6 @@ const BIOCORE_APP_DIR =
 const BIOCORE_PYTHON =
   process.env.BIOCORE_PYTHON ||
   path.resolve(BIOCORE_APP_DIR, 'venv', 'Scripts', 'python.exe');
-
-loadGatewayEnv();
 
 export async function checkBioCoreBackend(port = 8000) {
   try {
@@ -42,23 +39,6 @@ export async function checkBioCoreBackend(port = 8000) {
     return { online: false, status: `HTTP_${res.status}`, port };
   } catch (err) {
     return { online: false, error: err.message, port };
-  }
-}
-
-export async function checkTelegramBot() {
-  const bot = new TelegramBotGateway();
-  if (!bot.botToken) {
-    return { online: false, reason: 'TELEGRAM_BOT_TOKEN not configured in .env' };
-  }
-  try {
-    const me = await bot.callApi('getMe');
-    return {
-      online: true,
-      username: me.result?.username,
-      allowedUsers: Array.from(bot.allowedUsers),
-    };
-  } catch (err) {
-    return { online: false, error: err.message };
   }
 }
 
@@ -79,23 +59,12 @@ export function spawnBioCoreBackend() {
   return child.pid;
 }
 
-export function spawnTelegramGateway() {
-  const scriptPath = path.join(ROOT_DIR, 'tools', 'gateway', 'run-gateway.mjs');
-  const child = spawn(process.execPath, [scriptPath], {
-    detached: true,
-    stdio: 'ignore',
-    windowsHide: true,
-  });
-  child.unref();
-  return child.pid;
-}
-
 export async function runHealthCheck(options = {}) {
   const autoStart = Boolean(options.start || process.argv.includes('--start'));
 
   console.log('🔍 Checking 24/7 background services health...\n');
 
-  // 1. Check BioCore Backend
+  // Check BioCore Backend
   const backend = await checkBioCoreBackend();
   if (backend.online) {
     console.log(`✅ BioCore Backend: ONLINE (http://127.0.0.1:${backend.port}/health)`);
@@ -111,15 +80,7 @@ export async function runHealthCheck(options = {}) {
     }
   }
 
-  // 2. Check Telegram Gateway
-  const tg = await checkTelegramBot();
-  if (tg.online) {
-    console.log(`✅ Telegram Bot Gateway: ONLINE (@${tg.username}, ${tg.allowedUsers.length} user authorized)`);
-  } else {
-    console.log(`❌ Telegram Bot Gateway: OFFLINE (${tg.reason || tg.error})`);
-  }
-
-  console.log('\n💡 Tip: Run `npm run services:start` or setup Windows Task Scheduler to keep them running 24/7.');
+  console.log('\n💡 Tip: Run `npm run services:start` or setup Windows Task Scheduler to keep backend running 24/7.');
 }
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {

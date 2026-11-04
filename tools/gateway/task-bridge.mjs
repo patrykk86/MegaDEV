@@ -13,8 +13,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { resolveSuspension } from '../resumable-approval.mjs';
-import { sanitizeInput } from '../sanitize.mjs';
-import { scrubTelegramSecrets, TelegramBotGateway } from './telegram-bot.mjs';
+import { redactOutbound, sanitizeInput } from '../sanitize.mjs';
 
 const ROOT_DIR = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..', '..');
 const RUNS_DIR = path.join(ROOT_DIR, '.runs');
@@ -100,6 +99,9 @@ async function dispatchTaskReview(
   updatedRecord,
   { summary, filesModified, testStatus, reviewerVerdict },
 ) {
+  if (!bot || typeof bot.sendMessage !== 'function') {
+    return;
+  }
   try {
     const targetChatId = updatedRecord.metadata?.chatId || bot.defaultChatId;
     if (bot.botToken && targetChatId) {
@@ -119,7 +121,7 @@ async function dispatchTaskReview(
       await bot.sendMessage(targetChatId, reviewLines.join('\n'));
     }
   } catch (err) {
-    console.error(`[task-bridge] Failed to dispatch review to Telegram: ${scrubTelegramSecrets(err.message)}`);
+    console.error(`[task-bridge] Failed to dispatch review: ${redactOutbound(err.message)}`);
   }
 }
 
@@ -155,7 +157,7 @@ export async function completeTask(
   fs.writeFileSync(tempFile, `${lines}\n`, 'utf8');
   fs.renameSync(tempFile, TASKS_FILE);
 
-  const bot = options.bot || new TelegramBotGateway();
+  const bot = options.bot || null;
   await dispatchTaskReview(bot, updatedRecord, { summary, filesModified, testStatus, reviewerVerdict });
   return updatedRecord;
 }

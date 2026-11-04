@@ -7,6 +7,46 @@
     "public": "public",
     "rewrites": [
       {
+        "source": "/.well-known/oauth*/**",
+        "function": "mcp"
+      },
+      {
+        "source": "/.well-known/oauth*",
+        "function": "mcp"
+      },
+      {
+        "source": "/.well-known/openid*",
+        "function": "mcp"
+      },
+      {
+        "source": "/oauth/**",
+        "function": "mcp"
+      },
+      {
+        "source": "/mcp",
+        "function": "mcp"
+      },
+      {
+        "source": "/mcp/**",
+        "function": "mcp"
+      },
+      {
+        "source": "/plan",
+        "function": "mcp"
+      },
+      {
+        "source": "/plan.html",
+        "function": "mcp"
+      },
+      {
+        "source": "/files/**",
+        "function": "mcp"
+      },
+      {
+        "source": "/api/**",
+        "function": "mcp"
+      },
+      {
         "source": "**",
         "function": "pulse"
       }

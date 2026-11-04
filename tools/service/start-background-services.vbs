@@ -19,11 +19,6 @@ End If
 
 backendCmd = fso.BuildPath(scriptDir, "start-backend.cmd")
 backendLog = fso.BuildPath(servicesDir, "backend.log")
-gatewayCmd = fso.BuildPath(scriptDir, "start-gateway.cmd")
-gatewayLog = fso.BuildPath(servicesDir, "gateway.log")
 
 ' 1. Start BioCore FastAPI Backend with log output to .runs/services/backend.log
 WshShell.Run "cmd.exe /c """"" & backendCmd & """ > """ & backendLog & """ 2>&1""", 0, False
-
-' 2. Start MegaDEV Telegram Gateway with log output to .runs/services/gateway.log
-WshShell.Run "cmd.exe /c """"" & gatewayCmd & """ > """ & gatewayLog & """ 2>&1""", 0, False

@@ -113,3 +113,16 @@ export const pulse = onRequest({ cors: true, maxInstances: 10 }, async (req, res
   res.status(200).json({ ok: true, ignored: payload?.kind });
 });
 
+import { createServerHandler } from './mcp-server.mjs';
+
+const mcpHandler = createServerHandler({
+  publicBaseUrl: 'https://megadevpat.web.app',
+  adminToken: process.env.ADMIN_TOKEN || 'admin-mega-dev-secure',
+  openRouterApiKey: process.env.OPENROUTER_API_KEY || '',
+});
+
+export const mcp = onRequest({ cors: true, maxInstances: 10 }, async (req, res) => {
+  await mcpHandler(req, res);
+});
+
+

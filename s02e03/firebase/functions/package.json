@@ -1,0 +1,13 @@
+{
+  "name": "mcp-function",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "index.js",
+  "dependencies": {
+    "firebase-functions": "^6.3.2"
+  },
+  "engines": {
+    "node": "22"
+  }
+}
+

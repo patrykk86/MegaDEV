@@ -1,0 +1,16 @@
+{
+  "functions": {
+    "source": "functions"
+  },
+  "hosting": {
+    "site": "megadevpat",
+    "public": "public",
+    "rewrites": [
+      {
+        "source": "**",
+        "function": "mcp"
+      }
+    ]
+  }
+}
+
