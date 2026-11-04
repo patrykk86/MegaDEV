@@ -19,6 +19,7 @@
     - `policy_change`: Changes modifying `AGENTS.md`, `SKILL.md`, `workspace_rules.md`, or `*.tool.json` strictly mandate executing the synthetic evaluation matrix (Section 5) in addition to static analysis.
     - `cross_cutting_security`: Changes touching `tools/agent-guard.mjs`, `tools/agent-loop.mjs`, `tools/journal.mjs`, or workspace root architecture require full workspace static analysis (`node --run test`).
   - *Transparency*: Always report which verification commands were executed and why.
+- **Multi-Model Peer Review Mandate (OpenRouter)**: Whenever new tools, skills, schemas (`*.tool.json`), or non-trivial code modifications are authored, the agent must dispatch a cross-model review to an independent external model via OpenRouter (`ask_openrouter` on `worker-bridge` with `target_files` and verbatim context embedded in the prompt; e.g. `mode: "review"` for Fowler code smells and architectural critiques, or `mode: "security"` for security and secret checks) before declaring completion. The agent must autonomously analyze reviewer findings, remediate substantive issues, and execute deterministic re-verification.
 - **Check Existing Handoff Assets First**: Before running package installs or rebuilding project scaffolding, inspect previous episode handoffs (e.g., `rig-handover/`) or local build trees to reuse verified node_modules and configurations.
 
 ### 3. Canonical Toolbox & Protocols

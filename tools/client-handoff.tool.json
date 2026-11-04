@@ -1,0 +1,38 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "client-handoff",
+  "description": "Audits milestone deliverable files for integrity, scans for credentials, enforces root containment, and generates clean client delivery manifests. Compatible with skill: 'client-handoff' (.agents/skills/client-handoff/SKILL.md) for structured client packaging.",
+  "metadata": {
+    "skill": "client-handoff",
+    "script": "tools/client-handoff.mjs",
+    "runtime": "node"
+  },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "milestone": {
+        "type": "string",
+        "description": "Name or title of the milestone or sprint deliverable."
+      },
+      "client": {
+        "type": "string",
+        "description": "Optional name of the client or stakeholder receiving the deliverable."
+      },
+      "files": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "minItems": 1,
+        "description": "List of relative file paths within the workspace root included in this client deliverable."
+      },
+      "outputManifest": {
+        "type": "string",
+        "default": "DELIVERY.md",
+        "description": "Relative path inside project root where the Markdown delivery manifest should be written."
+      }
+    },
+    "required": ["milestone", "files"],
+    "additionalProperties": false
+  }
+}
