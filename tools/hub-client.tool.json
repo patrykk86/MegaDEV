@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "hub_client",
+  "description": "Canonical Challenge Hub HTTP client for task submission, verification, and masked request logging. Reads credentials securely from .env and redacts secrets automatically.",
+  "metadata": {
+    "skill": null,
+    "standaloneReason": "Canonical direct API client with automated secret masking and ticket injection; requires no high-level procedural workflow guidance.",
+    "script": "tools/hub-client.mjs",
+    "runtime": "node"
+  },
+  "type": "object",
+  "properties": {
+    "endpoint": {
+      "type": "string",
+      "description": "Relative hub path or endpoint URL."
+    },
+    "method": {
+      "type": "string",
+      "enum": [
+        "GET",
+        "POST"
+      ],
+      "default": "POST",
+      "description": "HTTP method."
+    },
+    "payload": {
+      "type": "object",
+      "description": "Payload body to send."
+    }
+  },
+  "required": [
+    "endpoint"
+  ],
+  "additionalProperties": false
+}

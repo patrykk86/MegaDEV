@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "kb_check",
+  "description": "Validates knowledge base notes, BLUF adherence, note contracts, entity taxonomy, and link reachability. Compatible with skill: 'knowledge' (.agents/skills/knowledge/SKILL.md) for note vaults, wikis, and structured domain documentation.",
+  "metadata": {
+    "skill": "knowledge",
+    "script": "tools/kb-check.mjs",
+    "runtime": "node"
+  },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "kbRoot": {
+        "type": "string",
+        "description": "Root directory of the knowledge base to inspect (e.g., 'support-kb')."
+      }
+    }
+  }
+}
+

@@ -9,9 +9,16 @@
 - **Challenge Account Isolation**: Never use the user's primary personal GitHub account (`bl8er`) or `github-mcp-server` for course challenge deliverables. Use the designated challenge identity (`patrykk86`) via authenticated browser DevTools or scoped credentials, and commit using `patrykk86 <patrykk86@users.noreply.github.com>`.
 - **Challenge GitHub Token Scoping**: When challenges spawn dedicated repositories from course templates, ensure credentials carry repository-wide issue and push permissions (`repo` scope), avoiding single-repo-scoped fine-grained token 403 blocks.
 
-### 2. Autonomous Execution & Static Verification (Trust Pyramid)
+### 2. Autonomous Execution & Proportional Verification (Trust Pyramid)
 - Proceed autonomously on all internal project work (reading, editing, running local tests/checks). Only ask the user before modifying host/system-wide settings or making paid external model calls in `mega-examples`.
-- **Always verify changes via static analysis (`node --run test` or `npm.cmd test` at workspace root)** before finishing a task. `tools/check.mjs` runs secret hygiene scans, single-canonical-tool checks, multi-source handoff validation, `mex check`, `tsc --noEmit`, and Biome linting.
+- **Proportional Verification Principle**: Verify changes in proportion to their impact and blast radius, rather than executing blanket full-suite test runs on every minor edit.
+  - *Reasoning*: Blanket test mandates create unnecessary latency and waste compute on localized edits. The agent must evaluate the change's blast radius and execute targeted deterministic checks.
+  - *Deterministic Blast-Radius Scopes*:
+    - `localized_code`: Single module or utility edits run targeted unit tests.
+    - `doc_only`: Pure documentation edits (excluding policy files) run `node tools/check.mjs` for tracked file hygiene.
+    - `policy_change`: Changes modifying `AGENTS.md`, `SKILL.md`, `workspace_rules.md`, or `*.tool.json` strictly mandate executing the synthetic evaluation matrix (Section 5) in addition to static analysis.
+    - `cross_cutting_security`: Changes touching `tools/agent-guard.mjs`, `tools/agent-loop.mjs`, `tools/journal.mjs`, or workspace root architecture require full workspace static analysis (`node --run test`).
+  - *Transparency*: Always report which verification commands were executed and why.
 - **Check Existing Handoff Assets First**: Before running package installs or rebuilding project scaffolding, inspect previous episode handoffs (e.g., `rig-handover/`) or local build trees to reuse verified node_modules and configurations.
 
 ### 3. Canonical Toolbox & Protocols
@@ -29,6 +36,11 @@
 - **Live Grounding for Mutable Entities**: Always verify fast-moving identifiers (models, API versions, prices) against official live documentation rather than relying on parametric memory.
 - **Live Re-Check for Asynchronous Source Feeds**: Never finalize plans, check-ins, or build deliverables solely based on an initial handoff snapshot. Upstream teams, CI runners, and challenge feeds push late asynchronous revisions (e.g. host ports, image versions, database names) during active migration runs. Always re-poll live source archive URLs, feeds, or remote endpoints before submitting deliverables and before declaring task completion, ensuring late-breaking decisions override stale handoffs.
 - **Conversational Thread Context Reconstruction**: For asynchronous multi-turn channels (email threads, issue comments, webhook callbacks), follow-up requests frequently omit initial links, files, or reference data. Before model invocation, the harness must fetch the full thread/history chain to accumulate referenced URLs, prior questions, and answers into the prompt context.
+- **Bidirectional Tool-Skill Augmentation & Progressive Discovery**: Break the silo between executable tools and modular agent skills:
+  - *Tools Advertise Skills*: Custom MCP servers, CLI utilities in `tools/`, and native tool schemas must declare compatible skills in their descriptions or metadata (pointing agents to procedural skills like `multi-source-worker`, `rook-loop`, or `knowledge` that guide complex workflows).
+  - *Skills Reference Augmented Tools*: Skill manifests in `.agents/skills/<name>/SKILL.md` must explicitly declare the canonical tools, CLIs, or MCP endpoints they augment and guide (in frontmatter `metadata.tools` or instruction headers).
+  - *Progressive Discovery*: Expose lean, minimal tool schemas upfront to preserve context window budgets. Dynamically load specialized skills on-demand only when non-trivial workflows, edge cases, or formatting conventions require deep procedural guidance.
+  - *Loose Coupling*: Tools remain directly executable by models for simple calls without requiring full skill ingestion; skills provide high-level workflows even if specific tools are unavailable or mocked.
 
 ### 4. Background Workers & Asynchronous Delegation Protocol
 - **Non-Blocking Coordination**: The primary agent acts as coordinator and must never stall user interaction while waiting for long-running jobs. Delegate intensive processing (audits, digest collation, batch transforms) to asynchronous background workers or subagents via `invoke_subagent` or `schedule`.

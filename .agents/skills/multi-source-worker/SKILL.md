@@ -1,6 +1,9 @@
 ---
 name: multi-source-worker
 description: Orchestrates isolated subagents and standardized hand-offs for multiple media streams, recordings, or logs with disparate clocks. Use when a task involves multi-stream or multi-clock recordings. Not for single-stream transcription; use tools/transcribe.mjs directly.
+metadata:
+  tools: tools/transcribe.mjs
+  schema: tools/transcribe.tool.json
 ---
 
 # Multi-Source Worker Isolation & Hand-off Protocol

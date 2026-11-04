@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "check",
+  "description": "Runs static workspace hygiene checks: secret detection, single-canonical-tool enforcement, relative path invariants, multi-source handoffs, Biome linting, and TypeScript compilation. Compatible with skill: 'rig' (.agents/skills/rig/SKILL.md) for repo setup and harness guardrails.",
+  "metadata": {
+    "skill": "rig",
+    "script": "tools/check.mjs",
+    "runtime": "node"
+  },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "fix": {
+        "type": "boolean",
+        "default": false,
+        "description": "Whether to automatically fix safe lint/formatting errors."
+      }
+    }
+  }
+}
+

@@ -91,6 +91,10 @@ Usage:
   node tools/transcribe.mjs -i <file> [options]
   node tools/transcribe.mjs --validate-handoff <handoff.json>
   node tools/transcribe.mjs --aggregate <handoff_video.json> <handoff_audio.json>
+
+Skill link:
+  For multi-stream recording isolation or disparate clocks, see 'multi-source-worker'
+  (.agents/skills/multi-source-worker/SKILL.md). Tool schema: tools/transcribe.tool.json.
 `);
 }
 

@@ -1,0 +1,20 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "check_skills",
+  "description": "Validates skill manifests (SKILL.md), enforcing frontmatter schemas, description character bounds, third-person syntax, forbidden phrases, and pairwise Jaccard overlap limits. Compatible with skill: 'skill-shaper' (.agents/skills/skill-shaper/SKILL.md) for shaping agent skills and preventing over-triggering.",
+  "metadata": {
+    "skill": "skill-shaper",
+    "script": "tools/check-skills.mjs",
+    "runtime": "node"
+  },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "skillDir": {
+        "type": "string",
+        "description": "Path to a specific skill directory to validate, or omit to validate all workspace skills."
+      }
+    }
+  }
+}
+

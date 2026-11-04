@@ -1,0 +1,30 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "journal",
+  "description": "Appends and inspects SHA-256 hash-chained cryptographic task journals, verification receipts, and cross-model reflections. Compatible with skill: 'keep' (.agents/skills/keep/SKILL.md) for persisting sourced findings and receipts across sessions.",
+  "metadata": {
+    "skill": "keep",
+    "script": "tools/journal.mjs",
+    "runtime": "node"
+  },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "action": {
+        "type": "string",
+        "enum": ["verify", "summary", "list", "append"],
+        "description": "Operation to perform on the journal ledger."
+      },
+      "day": {
+        "type": "string",
+        "description": "ISO date (YYYY-MM-DD) when filtering entries."
+      },
+      "entry": {
+        "type": "object",
+        "description": "Payload to append when action is 'append'."
+      }
+    },
+    "required": ["action"]
+  }
+}
+

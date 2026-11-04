@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "contextual_recall",
+  "description": "Performs hybrid sparse vector retrieval with BM25 term weighting and tag boosting across past agent session notes, handoffs, and domain facts. Compatible with skill: 'rook-loop' (.agents/skills/rook-loop/SKILL.md) for recalling historical decisions and inter-session findings.",
+  "metadata": {
+    "skill": "rook-loop",
+    "script": "tools/memory/contextual-recall.mjs",
+    "runtime": "node"
+  },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "query": {
+        "type": "string",
+        "description": "Natural language query or topic to search past sessions for."
+      },
+      "maxTokens": {
+        "type": "integer",
+        "default": 1000,
+        "description": "Maximum token budget for returned contextual fragments."
+      },
+      "minScore": {
+        "type": "number",
+        "default": 0.05,
+        "description": "Minimum similarity score threshold."
+      }
+    },
+    "required": ["query"]
+  }
+}
+

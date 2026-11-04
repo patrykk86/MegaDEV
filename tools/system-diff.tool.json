@@ -1,0 +1,33 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "system_diff_build",
+  "description": "Gathers git diffs, parses hunks, and compiles self-contained 5-layer HTML system change reports. Compatible with skill: 'system-diff' (.agents/skills/system-diff/SKILL.md) for architectural review, decision framing, and layer isolation rules.",
+  "metadata": {
+    "skill": "system-diff",
+    "script": "tools/system-diff-build.mjs",
+    "runtime": "node"
+  },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "baseRef": {
+        "type": "string",
+        "description": "Base Git reference or commit SHA (e.g. 'main', 'origin/main')."
+      },
+      "headRef": {
+        "type": "string",
+        "description": "Head Git reference or commit SHA."
+      },
+      "specFile": {
+        "type": "string",
+        "description": "JSON spec containing title, answer, decisions, system map, and part annotations."
+      },
+      "output": {
+        "type": "string",
+        "description": "Target path for the compiled self-contained HTML report."
+      }
+    },
+    "required": ["baseRef", "headRef"]
+  }
+}
+

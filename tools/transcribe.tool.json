@@ -1,0 +1,131 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "transcribe",
+  "description": "Aligns audio speech segments with transcripts, validates standardized handoff schemas, and aggregates multi-source findings. Compatible with skill: 'multi-source-worker' (.agents/skills/multi-source-worker/SKILL.md) for multi-stream isolation and disparate clocks. Simple single-stream transcription runs directly without requiring skill loading. All file paths must resolve inside the workspace root; secret files (.env, *.pem, *.key) are rejected.",
+  "metadata": {
+    "skill": "multi-source-worker",
+    "script": "tools/transcribe.mjs",
+    "runtime": "node"
+  },
+  "type": "object",
+  "properties": {
+    "mode": {
+      "type": "string",
+      "enum": [
+        "align",
+        "export_handoff",
+        "validate_handoff",
+        "aggregate"
+      ],
+      "default": "align",
+      "description": "Operational mode: 'align' for segment alignment, 'export_handoff' to produce a standardized handoff JSON, 'validate_handoff' to verify fail-closed schema compliance, or 'aggregate' to merge multiple source handoffs."
+    },
+    "input": {
+      "type": "string",
+      "description": "Workspace-relative path to the raw speech segments JSON file containing timestamps and text."
+    },
+    "transcript": {
+      "type": "string",
+      "description": "Workspace-relative path to the plain text transcript file for sentence-by-sentence alignment."
+    },
+    "sourceId": {
+      "type": "string",
+      "description": "Identifier for the source stream (e.g., 'video', 'audio'). Required when mode is export_handoff."
+    },
+    "originFile": {
+      "type": "string",
+      "description": "Original media filename (e.g., 'status-line.mp3'). Required when mode is export_handoff."
+    },
+    "clockRef": {
+      "type": "string",
+      "pattern": "^(UTC|local[+-]\\d{1,2}h)$",
+      "default": "UTC",
+      "description": "Clock reference identifier conforming to UTC or local±Nh. Required when mode is export_handoff."
+    },
+    "clockOffset": {
+      "type": "integer",
+      "default": 0,
+      "description": "Integer hour offset relative to UTC (e.g. +2 for local+2h). Required when mode is export_handoff."
+    },
+    "handoff": {
+      "type": "string",
+      "description": "Workspace-relative path to the handoff JSON file when mode is 'validate_handoff' or 'export_handoff'."
+    },
+    "handoffs": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "List of workspace-relative handoff file paths to combine when mode is 'aggregate'."
+    },
+    "output": {
+      "type": "string",
+      "description": "Target workspace-relative output file path to write results."
+    }
+  },
+  "required": [
+    "mode"
+  ],
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "align"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "input"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "export_handoff"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "input",
+          "handoff",
+          "sourceId",
+          "originFile"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "validate_handoff"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "handoff"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "mode": {
+            "const": "aggregate"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "handoffs"
+        ]
+      }
+    }
+  ],
+  "additionalProperties": false
+}
