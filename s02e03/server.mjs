@@ -17,8 +17,10 @@
  */
 
 import crypto from 'node:crypto';
+import dns from 'node:dns';
 import fs from 'node:fs';
 import http from 'node:http';
+import net from 'node:net';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -279,25 +281,72 @@ export const TOOLS = [
 ];
 
 // --- SSRF Guard & Audio Transcription Execution ---
+export function isPrivateOrReservedHostOrIp(rawHost) {
+  const host = String(rawHost || '')
+    .toLowerCase()
+    .replace(/^\[|\]$/g, '')
+    .replace(/\.+$/, '');
+  if (!host) return true;
+  if (
+    host === 'localhost' ||
+    host === '127.0.0.1' ||
+    host === '::1' ||
+    host === '::' ||
+    host === '0.0.0.0' ||
+    host.startsWith('::ffff:') ||
+    host.startsWith('64:ff9b:') ||
+    /^fc[0-9a-f]{2}:/i.test(host) ||
+    /^fd[0-9a-f]{2}:/i.test(host) ||
+    /^fe[89ab][0-9a-f]:/i.test(host) ||
+    host.endsWith('.local') ||
+    host.endsWith('.internal') ||
+    host.endsWith('.nip.io') ||
+    host.endsWith('.sslip.io') ||
+    host.endsWith('.localtest.me') ||
+    /^10\./.test(host) ||
+    /^127\./.test(host) ||
+    /^0\./.test(host) ||
+    /^192\.168\./.test(host) ||
+    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
+    /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(host) ||
+    /^169\.254\./.test(host)
+  ) {
+    return true;
+  }
+  return false;
+}
+
 export function assertSafeAudioUrl(audioUrl) {
   const parsed = new URL(audioUrl);
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     throw new Error('Only HTTP/HTTPS URLs are allowed for audio transcription');
   }
-  const host = parsed.hostname.toLowerCase();
-  if (
-    host === 'localhost' ||
-    host === '127.0.0.1' ||
-    host === '::1' ||
-    host === '0.0.0.0' ||
-    host.endsWith('.local') ||
-    host.endsWith('.internal') ||
-    /^10\./.test(host) ||
-    /^192\.168\./.test(host) ||
-    /^172\.(1[6-9]|2\d|3[01])\./.test(host) ||
-    /^169\.254\./.test(host)
-  ) {
+  if (parsed.username || parsed.password) {
+    throw new Error('URLs with embedded credentials are blocked');
+  }
+  if (isPrivateOrReservedHostOrIp(parsed.hostname)) {
     throw new Error('Requests to private or loopback networks are blocked');
+  }
+}
+
+export async function assertSafeResolvedDns(audioUrl) {
+  assertSafeAudioUrl(audioUrl);
+  const parsed = new URL(audioUrl);
+  const host = parsed.hostname.replace(/^\[|\]$/g, '').replace(/\.+$/, '');
+  if (net.isIP(host)) {
+    if (isPrivateOrReservedHostOrIp(host)) {
+      throw new Error('Resolved IP belongs to a private or loopback network');
+    }
+    return;
+  }
+  const records = await dns.promises.lookup(host, { all: true });
+  if (!Array.isArray(records) || records.length === 0) {
+    throw new Error('Unable to resolve audio URL hostname');
+  }
+  for (const rec of records) {
+    if (isPrivateOrReservedHostOrIp(rec.address)) {
+      throw new Error('DNS resolved to a blocked private or loopback IP address');
+    }
   }
 }
 
@@ -306,7 +355,7 @@ export async function transcribeAudioUrl(audioUrl, openRouterApiKey) {
     throw new Error('Audio URL is required');
   }
 
-  assertSafeAudioUrl(audioUrl);
+  await assertSafeResolvedDns(audioUrl);
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25000);
@@ -315,6 +364,7 @@ export async function transcribeAudioUrl(audioUrl, openRouterApiKey) {
   try {
     resp = await fetch(audioUrl, {
       signal: controller.signal,
+      redirect: 'error',
       headers: {
         'User-Agent': 'MegaDev-Transcriber/1.0',
       },
@@ -615,7 +665,14 @@ export async function readBody(req, limitBytes = 10 * 1024 * 1024) {
 
 // --- Core MCP & OAuth Request Handler ---
 export function createServerHandler(options = {}) {
-  const publicBaseUrl = (options.publicBaseUrl || process.env.PUBLIC_URL || 'http://localhost:8787').replace(/\/$/, '');
+  const defaultBase = IS_CLOUD ? 'https://megadevpat.web.app' : 'http://localhost:8787';
+  const rawBaseUrl = (options.publicBaseUrl || process.env.PUBLIC_URL || defaultBase).replace(/\/+$/, '');
+  const parsedBaseUrl = new URL(rawBaseUrl);
+  if (parsedBaseUrl.protocol !== 'http:' && parsedBaseUrl.protocol !== 'https:') {
+    throw new Error('PUBLIC_URL must use http: or https: protocol');
+  }
+  const normalizedPath = parsedBaseUrl.pathname.replace(/\/+$/, '');
+  const publicBaseUrl = `${parsedBaseUrl.origin}${normalizedPath}`;
   const adminToken = options.adminToken || process.env.ADMIN_TOKEN || 'admin-mega-dev-secure';
   const openRouterApiKey = options.openRouterApiKey || process.env.OPENROUTER_API_KEY || '';
 
@@ -655,6 +712,62 @@ export function createServerHandler(options = {}) {
       appendLog({ type: 'GET_PLAN', path: pathname });
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
       res.end(renderPlanHtml(publicBaseUrl));
+      return;
+    }
+
+    // 2b. Agent2Agent (A2A) Discovery Card (RFC 8615 /.well-known/agent-card.json)
+    if ((pathname === '/.well-known/agent-card.json' || pathname === '/agent-card.json') && method === 'GET') {
+      appendLog({ type: 'GET_AGENT_CARD', path: pathname });
+      const cardPath = path.join(__dirname, 'agent-card.json');
+      if (!fs.existsSync(cardPath)) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'agent_card_unavailable' }));
+        return;
+      }
+      let card;
+      try {
+        card = JSON.parse(fs.readFileSync(cardPath, 'utf8'));
+      } catch (_) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'agent_card_invalid' }));
+        return;
+      }
+      const isValidCardSchema =
+        card &&
+        typeof card === 'object' &&
+        !Array.isArray(card) &&
+        typeof card.name === 'string' &&
+        typeof card.version === 'string' &&
+        card.securitySchemes?.oauth2Pkce &&
+        Array.isArray(card.security) &&
+        card.security.length > 0 &&
+        Array.isArray(card.skills) &&
+        card.skills.length > 0;
+      if (!isValidCardSchema) {
+        res.writeHead(503, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'agent_card_schema_invalid' }));
+        return;
+      }
+      const responseCard = {
+        ...card,
+        supportedInterfaces: [{ url: `${publicBaseUrl}/mcp`, protocolBinding: 'JSONRPC' }],
+        securitySchemes: {
+          ...card.securitySchemes,
+          oauth2Pkce: {
+            ...card.securitySchemes.oauth2Pkce,
+            flows: {
+              ...card.securitySchemes.oauth2Pkce.flows,
+              authorizationCode: {
+                ...card.securitySchemes.oauth2Pkce.flows?.authorizationCode,
+                authorizationUrl: `${publicBaseUrl}/oauth/authorize`,
+                tokenUrl: `${publicBaseUrl}/oauth/token`,
+              },
+            },
+          },
+        },
+      };
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(responseCard, null, 2));
       return;
     }
 
@@ -900,37 +1013,47 @@ export function createServerHandler(options = {}) {
     }
 
     // 9. Public File Server (/files/:id) with Path Traversal Protection
-    if (pathname.startsWith('/files/') && method === 'GET') {
+    if (pathname.startsWith('/files/') && (method === 'GET' || method === 'HEAD')) {
       const fileId = path.basename(pathname);
       if (!/^[a-zA-Z0-9_\-\.]+$/.test(fileId) || fileId.includes('..')) {
         res.writeHead(400, { 'Content-Type': 'text/plain' });
-        res.end('Invalid file identifier');
+        res.end(method === 'HEAD' ? undefined : 'Invalid file identifier');
         return;
       }
 
       if (uploadedFiles.has(fileId)) {
         const item = uploadedFiles.get(fileId);
         res.writeHead(200, {
-          'Content-Type': item.mimeType || 'application/octet-stream',
-          'Content-Length': item.buffer.length,
+          'Content-Type': item.mimeType || 'text/plain; charset=utf-8',
+          'Content-Length': String(item.buffer.length),
+          'Cache-Control': 'public, max-age=3600, no-transform',
         });
-        res.end(item.buffer);
+        if (method === 'HEAD') {
+          res.end();
+        } else {
+          res.end(item.buffer);
+        }
         return;
       }
 
       const filePath = path.join(FILES_DIR, fileId);
       if (!fs.existsSync(filePath)) {
         res.writeHead(404, { 'Content-Type': 'text/plain' });
-        res.end('File not found');
+        res.end(method === 'HEAD' ? undefined : 'File not found');
         return;
       }
 
       const stat = fs.statSync(filePath);
       res.writeHead(200, {
-        'Content-Type': 'application/octet-stream',
-        'Content-Length': stat.size,
+        'Content-Type': 'text/plain; charset=utf-8',
+        'Content-Length': String(stat.size),
+        'Cache-Control': 'public, max-age=3600, no-transform',
       });
-      fs.createReadStream(filePath).pipe(res);
+      if (method === 'HEAD') {
+        res.end();
+      } else {
+        fs.createReadStream(filePath).pipe(res);
+      }
       return;
     }
 
@@ -1176,9 +1299,21 @@ export function createServerHandler(options = {}) {
           // 3. upload
           if (toolName === 'upload') {
             const content = args.content ?? args.file ?? args.data ?? '';
-            const rawFilename = args.filename || args.name || 'uploaded.bin';
-            const ext = path.extname(rawFilename) || '.txt';
-            const fileId = crypto.randomBytes(8).toString('hex') + ext;
+            const rawFilename = String(args.filename || args.name || 'uploaded.bin').trim();
+            const baseWithoutExt = path.basename(rawFilename, path.extname(rawFilename));
+            if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(baseWithoutExt)) {
+              res.writeHead(400, { 'Content-Type': 'application/json' });
+              res.end(
+                JSON.stringify({
+                  jsonrpc: '2.0',
+                  id,
+                  error: { code: -32602, message: 'Invalid reserved filename' },
+                }),
+              );
+              return;
+            }
+            const safeExt = (path.extname(rawFilename).toLowerCase().match(/^\.[a-z0-9]{1,8}$/) || ['.txt'])[0];
+            const fileId = crypto.randomBytes(8).toString('hex') + safeExt;
             const destPath = path.join(FILES_DIR, fileId);
             const buf = Buffer.from(content, typeof content === 'string' ? 'utf8' : undefined);
 

@@ -121,7 +121,7 @@ const mcpHandler = createServerHandler({
   openRouterApiKey: process.env.OPENROUTER_API_KEY || '',
 });
 
-export const mcp = onRequest({ cors: true, maxInstances: 10 }, async (req, res) => {
+export const mcp = onRequest({ cors: true, maxInstances: 1, memory: '512MiB' }, async (req, res) => {
   await mcpHandler(req, res);
 });
 

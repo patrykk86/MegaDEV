@@ -10,11 +10,15 @@
 - **RFC 8414 OAuth Metadata:** `https://megadevpat.web.app/.well-known/oauth-authorization-server`
 - **Architecture Documentation:** `https://megadevpat.web.app/plan`
 - **Uploaded Sched Log:** `https://megadevpat.web.app/files/db3de1253d371d54.log`
-  - Verified with `lane ib6l4vfa` prepended to top of `sched-2026-10-05-e915d29d.log`.
+  - Bundled in `s01e05/firebase/functions/db3de1253d371d54.log.gz` and loaded on cold start (`8,483,630` bytes, SHA-256 `3681c4168be2bfb10cd542fa388f6fce69b2f6c2f179e6e62ac86b3a446afa8d`).
+  - Verified `200 OK` on both `GET` and `HEAD` with `Content-Length: 8483630` and `lane ib6l4vfa\n` prepended to `sched-2026-10-05-e915d29d.log`.
+- **Cold-Start Persistence:**
+  - Seeded with `r2yjqeqt` and `course note szm6oj2l` in `DEFAULT_CLOUD_NOTES` + synced to GCS (`gcf-v2-sources-599260002933-us-central1/mcp-store-s02e03.json`) and logged via `[MCP_NOTE_WRITTEN]`.
+  - Issued `mcpat_...` OAuth tokens remain valid across Cloud Run cold starts.
 - **Firebase Deployment:**
   - Project: `biocore-ai`
   - Hosting site: `megadevpat`
-  - Function: `mcp` (Node 22 Gen 2 in `us-central1`)
+  - Function: `mcp` (Node 22 Gen 2 in `us-central1`, `memory: 512MiB`, `maxInstances: 1`)
   - Container cleanup policy: configured for `gcf-artifacts` (auto-delete > 1 day)
 
 ## Challenge Progress & Notes

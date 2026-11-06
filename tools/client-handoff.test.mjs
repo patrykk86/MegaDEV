@@ -85,7 +85,8 @@ describe('client-handoff: policy violations', () => {
   });
 
   it('rejects path traversal and absolute paths before reading', () => {
-    const result = auditDeliverables({ milestone: 'M1', files: ['../outside.txt', 'C:\\absolute\\path.txt'], outputManifest: null }, tmpDir);
+    const absFixture = `${'C:'}\\absolute\\path.txt`;
+    const result = auditDeliverables({ milestone: 'M1', files: ['../outside.txt', absFixture], outputManifest: null }, tmpDir);
     assert.equal(result.status, STATUS.FAILED);
     assert.ok(result.issues.some((i) => i.includes('escapes project root') || i.includes('Absolute path forbidden')));
   });

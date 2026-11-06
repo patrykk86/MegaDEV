@@ -1,0 +1,159 @@
+{
+  "name": "MegaDEV Task Bridge & Coordinator Agent",
+  "description": "Local coordinator and background worker bridge handling mobile task dispatch, durable tool approval resumptions, and multi-channel outbound alerts without exposing internal workspace secrets.",
+  "version": "1.0.0",
+  "protocolVersion": "0.2.1",
+  "supportedInterfaces": [
+    {
+      "url": "http://127.0.0.1:8787/a2a",
+      "protocolBinding": "JSONRPC"
+    }
+  ],
+  "securitySchemes": {
+    "hmacSignature": {
+      "type": "apiKey",
+      "in": "header",
+      "name": "X-Webhook-Signature"
+    }
+  },
+  "security": [
+    {
+      "hmacSignature": []
+    }
+  ],
+  "capabilities": {
+    "streaming": false,
+    "pushNotifications": true,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "skills": [
+    {
+      "id": "enqueue-task",
+      "name": "Enqueue Delegated Task",
+      "description": "Sanitizes and queues a delegated coding or research instruction for background worker execution with heartbeat tracking.",
+      "inputModes": [
+        "application/json"
+      ],
+      "outputModes": [
+        "application/json"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "instruction": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Task instruction for the worker."
+          },
+          "author": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Authenticated sender identifier."
+          }
+        },
+        "required": [
+          "instruction"
+        ],
+        "additionalProperties": false
+      },
+      "inputContract": {
+        "type": "object",
+        "properties": {
+          "instruction": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 4000,
+            "description": "Task instruction for the worker."
+          },
+          "author": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "Authenticated sender identifier."
+          }
+        },
+        "required": [
+          "instruction"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "resolve-approval",
+      "name": "Resolve Suspended Tool Approval",
+      "description": "Approves or rejects a suspended HMAC-signed tool execution request in input-required state.",
+      "inputModes": [
+        "application/json"
+      ],
+      "outputModes": [
+        "application/json"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "approvalId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "Unique identifier of the suspended approval record."
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "description": "Operator decision on the pending tool call."
+          },
+          "feedback": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Optional operator reason or feedback."
+          }
+        },
+        "required": [
+          "approvalId",
+          "decision"
+        ],
+        "additionalProperties": false
+      },
+      "inputContract": {
+        "type": "object",
+        "properties": {
+          "approvalId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "description": "Unique identifier of the suspended approval record."
+          },
+          "decision": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected"
+            ],
+            "description": "Operator decision on the pending tool call."
+          },
+          "feedback": {
+            "type": "string",
+            "maxLength": 1000,
+            "description": "Optional operator reason or feedback."
+          }
+        },
+        "required": [
+          "approvalId",
+          "decision"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}

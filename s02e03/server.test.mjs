@@ -92,6 +92,25 @@ describe('s02e03 Remote MCP Server Suite', () => {
     assert.equal(data.resource_documentation, `${publicBaseUrl}/plan`);
   });
 
+  it('serves Agent2Agent (A2A) discovery card at /.well-known/agent-card.json', async () => {
+    const res = await callHandler(handler, { url: '/.well-known/agent-card.json' });
+    assert.equal(res.status, 200);
+    const card = await res.json();
+    assert.equal(card.name, 'MegaDEV Remote Agent & MCP Service');
+    assert.equal(card.version, '1.0.0');
+    assert.ok(Array.isArray(card.supportedInterfaces));
+    assert.equal(card.supportedInterfaces[0].url, `${publicBaseUrl}/mcp`);
+    assert.equal(card.supportedInterfaces[0].protocolBinding, 'JSONRPC');
+    assert.ok(Array.isArray(card.skills));
+    assert.equal(card.skills.length, 4);
+    for (const skill of card.skills) {
+      assert.ok(skill.id);
+      assert.ok(skill.name);
+      assert.ok(skill.inputContract);
+      assert.equal(skill.inputContract.type, 'object');
+    }
+  });
+
   it('serves RFC 8414 Authorization Server Metadata', async () => {
     const res = await callHandler(handler, { url: '/.well-known/oauth-authorization-server' });
     assert.equal(res.status, 200);

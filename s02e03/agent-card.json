@@ -1,0 +1,226 @@
+{
+  "name": "MegaDEV Remote Agent & MCP Service",
+  "description": "Autonomous agent service providing persistent memo retention, public asset hosting, timestamped audio transcription, and remote task coordination without exposing internal tools or memory.",
+  "version": "1.0.0",
+  "protocolVersion": "0.2.1",
+  "supportedInterfaces": [
+    {
+      "url": "https://megadevpat.web.app/mcp",
+      "protocolBinding": "JSONRPC"
+    }
+  ],
+  "securitySchemes": {
+    "oauth2Pkce": {
+      "type": "oauth2",
+      "flows": {
+        "authorizationCode": {
+          "authorizationUrl": "https://megadevpat.web.app/oauth/authorize",
+          "tokenUrl": "https://megadevpat.web.app/oauth/token",
+          "scopes": {
+            "mcp": "Invoke MCP skills"
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "oauth2Pkce": [
+        "mcp"
+      ]
+    }
+  ],
+  "capabilities": {
+    "streaming": true,
+    "pushNotifications": false,
+    "stateTransitionHistory": true
+  },
+  "defaultInputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "defaultOutputModes": [
+    "text/plain",
+    "application/json"
+  ],
+  "skills": [
+    {
+      "id": "memo-write",
+      "name": "Write Memo",
+      "description": "Saves a plain-text note to persistent storage and returns its unique identifier.",
+      "inputModes": [
+        "application/json"
+      ],
+      "outputModes": [
+        "application/json"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "The text content of the note to save."
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      },
+      "inputContract": {
+        "type": "object",
+        "properties": {
+          "text": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 10000,
+            "description": "The text content of the note to save."
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "memo-search",
+      "name": "Search Memos",
+      "description": "Searches stored memos by substring query and returns matching notes.",
+      "inputModes": [
+        "application/json"
+      ],
+      "outputModes": [
+        "application/json"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "The search query to match against note text."
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      },
+      "inputContract": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 512,
+            "description": "The search query to match against note text."
+          }
+        },
+        "required": [
+          "query"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "file-upload",
+      "name": "Upload Public Asset",
+      "description": "Stores a file payload on the service and returns a publicly reachable HTTPS link.",
+      "inputModes": [
+        "application/json"
+      ],
+      "outputModes": [
+        "application/json"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1048576,
+            "description": "The text or base64 content of the file."
+          },
+          "filename": {
+            "type": "string",
+            "pattern": "^(?!(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\..+)?$)(?!\\.{1,2}$)[A-Za-z0-9][A-Za-z0-9._-]{0,253}[A-Za-z0-9]?$",
+            "maxLength": 255,
+            "description": "Optional filename for the uploaded asset."
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "additionalProperties": false
+      },
+      "inputContract": {
+        "type": "object",
+        "properties": {
+          "content": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 1048576,
+            "description": "The text or base64 content of the file."
+          },
+          "filename": {
+            "type": "string",
+            "pattern": "^(?!(?:[Cc][Oo][Nn]|[Pp][Rr][Nn]|[Aa][Uu][Xx]|[Nn][Uu][Ll]|[Cc][Oo][Mm][1-9]|[Ll][Pp][Tt][1-9])(?:\\..+)?$)(?!\\.{1,2}$)[A-Za-z0-9][A-Za-z0-9._-]{0,253}[A-Za-z0-9]?$",
+            "maxLength": 255,
+            "description": "Optional filename for the uploaded asset."
+          }
+        },
+        "required": [
+          "content"
+        ],
+        "additionalProperties": false
+      }
+    },
+    {
+      "id": "audio-transcribe",
+      "name": "Transcribe Audio URL",
+      "description": "Downloads audio from an HTTPS URL (SSRF-guarded against RFC1918, loopback, CGNAT, IPv6 private, and link-local addresses) and produces timestamped text segments.",
+      "inputModes": [
+        "application/json"
+      ],
+      "outputModes": [
+        "application/json"
+      ],
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://[A-Za-z0-9.-]+(?::[0-9]{1,5})?/.*$",
+            "maxLength": 2048,
+            "description": "Public HTTPS URL of the audio file to transcribe."
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "additionalProperties": false
+      },
+      "inputContract": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://[A-Za-z0-9.-]+(?::[0-9]{1,5})?/.*$",
+            "maxLength": 2048,
+            "description": "Public HTTPS URL of the audio file to transcribe."
+          }
+        },
+        "required": [
+          "url"
+        ],
+        "additionalProperties": false
+      }
+    }
+  ]
+}
