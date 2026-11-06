@@ -112,7 +112,13 @@ function extractRecordFields(readInner) {
     return readInner;
   }
   const container =
-    readInner?.record ?? readInner?.incident ?? readInner?.entry ?? readInner?.item ?? readInner?.data ?? readInner;
+    readInner?.fields ??
+    readInner?.record ??
+    readInner?.incident ??
+    readInner?.entry ??
+    readInner?.item ??
+    readInner?.data ??
+    readInner;
   if (typeof container === 'string') {
     return container;
   }
