@@ -167,8 +167,8 @@ async function runJob1() {
   const toolsOut = await mcpRequest(mcpUrl, 'tools/list', {});
   const tools = toolsOut.response?.result?.tools || [];
 
-  // Step 1: search with scope: "ops/live"
-  const searchOut = await mcpToolCall(mcpUrl, 'search', { scope: 'ops/live' });
+  // Step 1: search with query: "tram-3", scope: "ops/live"
+  const searchOut = await mcpToolCall(mcpUrl, 'search', { query: 'tram-3', scope: 'ops/live' });
   const step1 = searchOut.inner?.step;
   const tram3Item = findTram3Item(searchOut.inner);
 
