@@ -10,7 +10,9 @@ import { describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import {
   buildPermutationMatrix,
+  CHECK_SKILLS_EVAL_CASES,
   evaluateSuite,
+  runCheckSkillsEval,
   runSyntheticEvalDemo,
   summarizeEvaluation,
 } from './eval-skill.mjs';
@@ -89,6 +91,44 @@ describe('Layer 5: evaluateSuite() & summarizeEvaluation()', () => {
     assert.ok(summary.improvements.length > 0);
     assert.equal(summary.v2PassRate, 1.0);
   });
+
+  it('evaluates 10 check-skills cases across 3 consecutive trials with 100% pass^3 consistency', async () => {
+    assert.equal(CHECK_SKILLS_EVAL_CASES.length, 10);
+    const res = await runCheckSkillsEval({ trials: 3 });
+
+    assert.equal(res.total, 10);
+    assert.equal(res.trials, 3);
+    assert.equal(res.passed, 10);
+    assert.equal(res.passedAllTrials, 10);
+    assert.equal(res.passRate, 1.0);
+    assert.equal(res.passHatK, 1.0);
+
+    for (const detail of res.details) {
+      assert.equal(detail.trials.length, 3);
+      assert.equal(detail.passedAllTrials, true);
+    }
+  });
+
+  it('distinguishes pass@1 from pass^3 when a trial flakes on a later run', async () => {
+    const cases = [{ id: 'stable' }, { id: 'flaky' }];
+    const runner = (c, trialIdx) => {
+      if (c.id === 'flaky' && trialIdx === 2) {
+        return false;
+      }
+      return true;
+    };
+    const policyAssert = (_c, outcome) => ({
+      passed: outcome === true,
+      category: 'reliability',
+      expected: true,
+      actual: outcome,
+    });
+
+    const res = await evaluateSuite({ cases, runner, policyAssert, trials: 3 });
+    assert.equal(res.passRate, 1.0);
+    assert.equal(res.passHatK, 0.5);
+    assert.equal(res.passedAllTrials, 1);
+  });
 });
 
 describe('Layer 5: CLI Execution', () => {
@@ -97,6 +137,16 @@ describe('Layer 5: CLI Execution', () => {
     assert.ok(stdout.includes('Evaluated 12 synthetic permutation cases.'));
     assert.ok(stdout.includes('Overall'));
     assert.ok(stdout.includes('Regressions: 0'));
+  });
+
+  it('executes --check-skills across 3 trials via child process successfully', () => {
+    const stdout = execFileSync(
+      process.execPath,
+      [CLI_PATH, '--check-skills', '--trials', '3'],
+      { encoding: 'utf8' },
+    );
+    assert.ok(stdout.includes('Evaluated 10 check-skills cases across 3 trials'));
+    assert.ok(stdout.includes('pass^3: 100.0%'));
   });
 });
 
