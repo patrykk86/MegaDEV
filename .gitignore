@@ -21,3 +21,4 @@ s[0-9][0-9]e[0-9][0-9]/starter/
 s[0-9][0-9]e[0-9][0-9]/sessions/
 s[0-9][0-9]e[0-9][0-9]/sessions-archive.json
 s[0-9][0-9]e[0-9][0-9]/requests.log
+s[0-9][0-9]e[0-9][0-9]/job-[0-9]*/

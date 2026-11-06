@@ -102,3 +102,23 @@ This verifies that all `sourceId`s are distinct, validates every handoff file ag
 
 - **Verbatim Clock Anchors**: When combining multi-source verbatim transcripts into a single record for course evaluation, keep native clock header sentences (`All times are UTC.`, `All times are local...`) intact; they act as provenance anchors without failing word-for-word matching.
 - **Cross-Session Continuity**: When pausing for a new session (`resume-challenge`), verify all handoff files exist on disk before printing the resume prompt. The resuming session consumes the handoff directly and must not re-download raw media.
+
+---
+
+## 5. Distributed Local + Remote MCP Worker Split (`two places` Pattern)
+
+When a challenge requires running two isolated MCP jobs on separate machines/networks and joining their outputs across timezones:
+
+1. **Job Split & Host Isolation**:
+   - Assign audio/transcription-heavy jobs (`voice-to-memo`) to a local isolated subagent so speech-to-text API keys remain local.
+   - Assign pure MCP lookup/redaction jobs (`incident-lookup`) to a remote GitHub Actions runner under the challenge identity (`patrykk86`), keeping active review hosts (`megadevpat`) untouched.
+2. **Skill-First MCP Execution**:
+   - Each worker must call `resources/read` on `skill://<skill-name>/SKILL.md` and `tools/list` before invoking tools.
+   - Inspect `inputSchema.required` dynamically (e.g., passing both `query` and `scope` to `search`) and unwrap nested record containers (`readInner.fields`) before calling `redact` and `submit`.
+3. **Secret Isolation & Planned Way Home**:
+   - Store `PAYLOAD_KEY` in GitHub Actions repository secrets (never as plaintext `workflow_dispatch` inputs on public repositories).
+   - Decrypt the job MCP URL in memory, emit `::add-mask::<mcpUrl>`, and print `ENCRYPTED_JOB1_BUNDLE:<iv>:<tag>:<ciphertext>` (AES-256-GCM) to the job log so the coordinator can fetch and decrypt the result and receipt via the GitHub API without an extra host.
+   - Redact `v1.eyJ...` step and receipt tokens before saving `.runs/<job>/result.json` or `execution-result.json`.
+4. **Timezone-Aware Join**:
+   - Convert each worker's timestamp to UTC (accounting for DST transitions such as `US Eastern` EDT `UTC-4` on Oct 31 vs `CET` `UTC+1` on Nov 1) before matching events across workers.
+

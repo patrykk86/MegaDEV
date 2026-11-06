@@ -1,0 +1,34 @@
+name: S02E04 Remote Job-1 Worker
+
+on:
+  workflow_dispatch:
+    inputs:
+      encrypted_job_url:
+        description: 'AES-256-GCM encrypted job-1 endpoint'
+        required: true
+        type: string
+      payload_key:
+        description: 'Ephemeral one-time hex key'
+        required: true
+        type: string
+
+jobs:
+  incident-lookup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Execute job-1 incident-lookup worker
+        env:
+          ENCRYPTED_JOB_URL: ${{ inputs.encrypted_job_url }}
+          PAYLOAD_KEY: ${{ inputs.payload_key }}
+        run: |
+          echo "::add-mask::$PAYLOAD_KEY"
+          node s02e04/remote-job1-worker.mjs
+
