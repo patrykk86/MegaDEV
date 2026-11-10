@@ -39,8 +39,44 @@ memory/MEMORY.md
 s03e01/inbox-raw.json
 s03e01/lesson.md
 s03e01/LESSON-NOTES.md
-.cline/mcp.json
-memory/MEMORY.md
 s03e01/pack/
 s02e03/firebase/
+# Local hand-off clone: rig carries a .git of its own, so a nested copy here is never
+# source for this repo (same reasoning as /mega-examples/ above)
+/rig-handover/
+# Downloaded tool binaries and captured media: regenerable, and occasionally very large
+*.exe
+*.mp3
+*.mp4
+*.m4a
+*.wav
+*.webm
+*.mov
+# Firebase CLI deploy cache and debug logs
+**/.firebase/
+firebase-debug.log*
+# Harness runtime state: durable suspensions and inbound drops never belong in history
+/.approvals/
+/data/inbound/
+**/.processed_messages.json
+# Server runtime state and uploaded payloads; the .gitkeep markers keep the folders
+s[0-9][0-9]e[0-9][0-9]/data/store.json
+s[0-9][0-9]e[0-9][0-9]/data/files/*
+!s[0-9][0-9]e[0-9][0-9]/data/files/.gitkeep
+# pytest writes its own cache here even though the workspace toolchain is Node
+/.pytest_cache/
+# Build output, coverage and OS/editor noise
+**/.svelte-kit/
+**/.next/
+**/dist/
+**/coverage/
+.nyc_output/
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+desktop.ini
+*.pid
+*.tmp
+*.bak
+*.orig
 
