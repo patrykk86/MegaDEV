@@ -1,0 +1,73 @@
+{
+  "list": {
+    "accepted": [
+      { "tag": "R-H5X", "source": { "file": "memo.m4a", "at": 5.42 } },
+      { "tag": "R-L9M", "source": { "file": "memo.m4a", "at": 18.82 } },
+      { "tag": "R-Z2X", "source": { "file": "memo.m4a", "at": 25.04 } },
+      { "tag": "R-M4X", "source": { "file": "recording.mp4", "at": 23 } },
+      {
+        "tag": "R-H6X",
+        "source": {
+          "file": "https://hq.mega.dev/challenges/status-for-the-night/board?t=v1.eyJ2YXJpYW50IjoiYyIsInN1YiI6IjE1MzYiLCJhdWQiOiJib2FyZDpzdGF0dXMtZm9yLXRoZS1uaWdodCIsImlhdCI6MTc5NDMzODcyNywiZXhwIjoxNzk0NDI1MTI3fQ.GeeCYTEL0ajLmdxvZc6TrSoQf33kcuSnkWCzLcJQOUE",
+          "region": { "x": 0.05, "y": 0.57, "w": 0.53, "h": 0.16 }
+        }
+      },
+      {
+        "tag": "R-L5X",
+        "source": { "file": "whiteboard.jpg", "region": { "x": 0.18, "y": 0.32, "w": 0.38, "h": 0.11 } }
+      },
+      {
+        "tag": "R-H9X",
+        "source": { "file": "screenshot.png", "region": { "x": 0.74, "y": 0.11, "w": 0.16, "h": 0.13 } }
+      },
+      {
+        "tag": "R-L2Z",
+        "source": { "file": "spec.pdf", "region": { "page": 1, "x": 0.118, "y": 0.454, "w": 0.294, "h": 0.016 } }
+      }
+    ],
+    "conflicts": [
+      {
+        "tag": "R-M9H",
+        "with": "R-Z2L",
+        "ownerQuestion": "R-M9H says dates go month first like the boards; R-Z2L says day first, 03/11, the way the night shift writes. Which format ships on the page?",
+        "source": { "file": "screenshot.png", "region": { "x": 0.74, "y": 0.35, "w": 0.18, "h": 0.13 } }
+      },
+      {
+        "tag": "R-Z2L",
+        "with": "R-M9H",
+        "ownerQuestion": "R-Z2L says dates go day first, 03/11, the night shift's own format; R-M9H says month first like the boards. Which format ships on the page?",
+        "source": { "file": "spec.pdf", "region": { "page": 2, "x": 0.118, "y": 0.184, "w": 0.762, "h": 0.016 } }
+      },
+      {
+        "tag": "R-Z3L",
+        "with": "R-K8X",
+        "ownerQuestion": "R-Z3L says keep the whole week on the page; R-K8X says last night only and nothing older stays. Which scope ships?",
+        "source": { "file": "whiteboard.jpg", "region": { "x": 0.18, "y": 0.44, "w": 0.31, "h": 0.07 } }
+      },
+      {
+        "tag": "R-K8X",
+        "with": "R-Z3L",
+        "ownerQuestion": "R-K8X says last night only, nothing older stays; R-Z3L says keep the whole week on the page. Which scope ships?",
+        "source": { "file": "spec.pdf", "region": { "page": 2, "x": 0.118, "y": 0.274, "w": 0.469, "h": 0.016 } }
+      },
+      {
+        "tag": "R-K4H",
+        "with": "R-L2Z",
+        "ownerQuestion": "R-K4H says every line gets its own row, tram 3 included; R-L2Z puts the newest incident at the top, which needs rows per incident. Is the table per line or per incident?",
+        "source": { "file": "recording.mp4", "at": 6.18 }
+      },
+      {
+        "tag": "R-K5Z",
+        "with": "6045",
+        "ownerQuestion": "R-K5Z says each incident names who ran it; record 6045 (schedule rebuild, sched-prod, 03:50-04:04) has an empty author. Who ran 6045, or does it ship unnamed?",
+        "source": { "file": "spec.pdf", "region": { "page": 1, "x": 0.118, "y": 0.497, "w": 0.337, "h": 0.016 } }
+      },
+      {
+        "tag": "R-K2L",
+        "with": "R-L5X",
+        "ownerQuestion": "R-K2L asks for Cache-Control max-age 45 seconds or less, so the boards read a copy for up to 45 seconds; R-L5X says the status JSON is read live and never a copy. Which wins, the 45-second cache or live reads?",
+        "source": { "file": "memo.m4a", "at": 32.04 }
+      }
+    ]
+  }
+}

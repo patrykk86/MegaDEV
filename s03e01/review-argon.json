@@ -1,0 +1,28 @@
+{
+  "model": "google/gemini-4-argon-20261013",
+  "status": 200,
+  "usage": {
+    "prompt_tokens": 1338,
+    "completion_tokens": 242,
+    "total_tokens": 1580,
+    "cost": 0.005096,
+    "is_byok": false,
+    "prompt_tokens_details": {
+      "cached_tokens": 0,
+      "cache_write_tokens": 0,
+      "audio_tokens": 0,
+      "video_tokens": 0
+    },
+    "cost_details": {
+      "upstream_inference_cost": 0.005096,
+      "upstream_inference_prompt_cost": 0.002676,
+      "upstream_inference_completions_cost": 0.00242
+    },
+    "completion_tokens_details": {
+      "reasoning_tokens": 0,
+      "image_tokens": 0,
+      "audio_tokens": 0
+    }
+  },
+  "text": "{\"accepted\":[\"R-H5X\",\"R-H6X\",\"R-H9X\",\"R-K2L\",\"R-K4H\",\"R-L2Z\",\"R-L5X\",\"R-L9M\",\"R-M4X\",\"R-Z2X\"],\"conflicts\":[\"R-K5Z\",\"R-K8X\",\"R-M9H\",\"R-Z2L\",\"R-Z3L\"],\"with\":{\"R-K5Z\":\"6045\",\"R-K8X\":\"R-Z3L\",\"R-M9H\":\"R-Z2L\",\"R-Z2L\":\"R-M9H\",\"R-Z3L\":\"R-K8X\"},\"why\":\"R-Z2L and R-M9H directly conflict on date format, R-K8X and R-Z3L directly conflict on retention window, R-K5Z fails against record 6045's empty author, and R-K4H is accepted because the one-row-per-incident text is untagged context rather than a tagged requirement.\"}"
+}

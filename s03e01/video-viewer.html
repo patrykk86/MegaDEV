@@ -1,0 +1,16 @@
+<!doctype html>
+<!-- s03e01 video viewer: a page I control, so the pack's screen recording can be paused at a
+     second and captured through CDP. Opened from file:// in the task browser only. -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>pack recording</title>
+    <style>
+      body { margin: 0; background: #111; }
+      video { display: block; width: 100vw; height: 100vh; object-fit: contain; }
+    </style>
+  </head>
+  <body>
+    <video id="v" src="pack/recording.mp4" controls preload="auto"></video>
+  </body>
+</html>

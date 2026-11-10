@@ -7,6 +7,14 @@
     "public": "public",
     "rewrites": [
       {
+        "source": "/status",
+        "function": "status"
+      },
+      {
+        "source": "/status/**",
+        "function": "status"
+      },
+      {
         "source": "**",
         "function": "mcp"
       }

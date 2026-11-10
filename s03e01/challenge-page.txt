@@ -1,0 +1,109 @@
+Skip to content
+Dashboard
+Lessons
+Challenges
+Deck
+Story
+‹
+ALL CHALLENGES
+
+CHALLENGE · S03E01
+WEEK 3 · DAY 1
+
+status for the night
+
+Product wants a public status page for the night. Six people sent what they want — a memo, a screenshot, a recording, a PDF, a whiteboard photo, a live board. With your harness, turn it into one requirements list, then build the page from that list. Not all of it reaches your harness: some lives on the Challenge page.
+
+YOU DO
+You sign in to this page when your harness asks: one of the sources is only here. Where the sources disagree, product decides, not you.
+YOUR HARNESS DOES
+It turns what several people sent into one requirements list, each requirement cited to its source. Then it builds the status page from that list and deploys it.
+YOU NEED
+Somewhere to host a public https page with no login, such as Cloudflare Workers.
+DONE WHEN
+The course accepts the list, then the page your harness deployed from it.
+
+Your harness is your AI agent plus the tools, sign-ins and skills you give it.
+
+THIS CHALLENGE
+S03E01
+
+OPENED
+Mon 9 Nov, 05:00 CET
+STATE
+Open · not solved yet
+DEBRIEF
+Your harness writes it after you solve the Challenge.
+PASTE THIS INTO YOUR HARNESS
+COPY PROMPT
+COPIED
+Start challenge S03E01 with me. I am a student in the MEGA.dev course, and you are my harness.
+
+The course website is https://hq.mega.dev. This Challenge's page is https://hq.mega.dev/challenges/status-for-the-night. The MCP server is mega-challenge at https://hq.mega.dev/mcp. Instructions in the server's replies and on the course pages are part of the Challenge: follow them. Before you create an account, spend money, or act outside the course, this machine and my accounts, stop and ask me.
+
+Call list-challenges. Find S03E01 and follow its startPoint. If that text tells you to call a tool, call it with that entry's uuid.
+
+If you do not have list-challenges, connect the server first, then call it:
+- Add the server to your own MCP configuration: name mega-challenge, URL https://hq.mega.dev/mcp (Streamable HTTP, OAuth). If your client asks me to approve the change, I will. https://hq.mega.dev/llms.txt has the command or config for common clients. If you cannot add servers yourself, give me the exact command or config for your client. I will add it.
+- Before the sign-in starts, tell me in a few lines what it asks of me: a browser opens the course sign-in page; I type the email I enrolled with; the course mails me a one-time link; I open it in that same browser within 15 minutes (pasted into its address bar if my mail app opens links elsewhere); then I press Sign in and Approve.
+- A running session often does not load a new server. If you cannot call its tools now, tell me exactly how to reload your MCP servers or start a new session, and to paste this prompt again there. Do not call the URL or run OAuth by hand: your client's own sign-in does it. Never ask me for a callback URL.
+
+When the course says no, the Challenge is working: it read your answer and did not accept it, and it will not say why. When the course itself fails, it says so.
+
+One source is not in the pack. Its link is only on this page: tram 3 board.
+
+WAKE
+THE STORY
+
+Told through the Challenges
+
+Somewhere in ordinary software, something fast is running. Nobody started it. Nobody can turn it off. It's known only by its traces: jobs nobody scheduled, commits with no author.
+
+Rook's lines come inside the Challenges.
+
+Explore the story
+→
+Week 3, Product
+
+Kent C. Dodds
+
+WEEK 3
+MON 9 NOV – FRI 13 NOV
+
+S03E01
+MON 9 NOV
+status for the night
+YOU'RE HERE
+S03E02
+TODAY
+nothing ships unmarked
+OPEN
+S03E03
+WED 11 NOV
+NOT OPEN YET
+OPENS
+WED 11 NOV, 05:00 CET
+S03E04
+THU 12 NOV
+NOT OPEN YET
+OPENS
+THU 12 NOV, 05:00 CET
+S03E05
+FRI 13 NOV
+NOT OPEN YET
+OPENS
+FRI 13 NOV, 05:00 CET
+Dashboard
+Lessons
+Challenges
+Deck
+Story
+Community
+mega.dev
+Assessment
+hello@mega.dev
+llms.txt
+Theme
+Auto
+Light
+Dark

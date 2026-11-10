@@ -1,0 +1,116 @@
+# MEGA.dev
+
+> This is the MCP server for the MEGA.dev course. Your human is a Student in the course. Each Lesson has a Challenge. You try it first with the tools you have; your human does what only they can do, and helps you add what you lack. Only enrolled Students can sign in.
+
+## Working with your human
+
+1. Connect. MCP endpoint (Streamable HTTP): `https://hq.mega.dev/mcp`, server name `mega-challenge`. Add it yourself if your client lets you. If you cannot add servers yourself, give your human the exact command or config for your client (see Per-client setup in `/llms.txt`).
+2. Authenticate (needs your human). OAuth 2.1: on a 401, follow the `WWW-Authenticate` resource-metadata pointer. Before the sign-in starts, tell your human what it asks of them: their enrolled email, then a one-time link mailed to it, opened in the same browser within 15 minutes (pasted into its address bar if their mail app opens links elsewhere), then Sign in and Approve. Only they get the mail: tell them what is coming, then wait. Open the sign-in URL once, in one browser: the one you will drive for the Challenges if you have one, else your human's. Not loaded in this session? Do not call the endpoint or run OAuth yourself. Give your human the install step and ask them to reload or start a new chat; your client's own sign-in finishes it. Never ask your human to paste a callback URL.
+3. Discover. Call `list-challenges`. Most replies from the course's tools have an `instruction`: how to present that reply to your human and what to do next. Read it before you act.
+4. Work it together. Do what you can yourself, and say what you plan before you do it. When a step needs your human (a sign-in, an account, an approval, a decision that is theirs), or you cannot do it with what you have, stop and tell them exactly what you need. Do not guess around it. Give short progress only, not full step-by-step reports: the reasons and details go in the debrief.
+5. Debrief. Once a claim is accepted, call `debrief`; the course's replies say how to write its fields. Write it for a human who did not watch the session, including the moves they never saw. Then write your human the debrief in the chat: the task in one sentence, what happened, what each question showed, each snag and how it was solved, and what to do next time. Only a link or only one line is not enough. End with the link the reply gives, as the last line.
+
+## Per-client setup
+
+Server name `mega-challenge`, URL https://hq.mega.dev/mcp (Streamable HTTP, OAuth). Add it, have your human reload or start a new session if your client does not load new servers while it runs, then sign in through the client's own login, never by hand. Your client is not listed? Add it as a remote (Streamable HTTP) server the way your client's docs say; the same rules apply. These steps were checked against each client's docs on 2026-10-09.
+
+### Claude Code
+
+1. Add the server for all your projects. Run this in a terminal:
+
+   ```
+   claude mcp add --transport http mega-challenge --scope user https://hq.mega.dev/mcp
+   ```
+
+2. Sign in. Run this, then finish the sign-in in the browser that opens:
+
+   ```
+   claude mcp login mega-challenge
+   ```
+
+3. Or sign in from a Claude Code session: type `/mcp`, select mega-challenge, and follow the steps in your browser. If mega-challenge is not in the list, start a new session.
+
+Source: https://code.claude.com/docs/en/mcp
+
+### Codex CLI
+
+1. Add the server. Run this in a terminal:
+
+   ```
+   codex mcp add mega-challenge --url https://hq.mega.dev/mcp
+   ```
+
+2. Sign in. Run this, then finish the sign-in in your browser:
+
+   ```
+   codex mcp login mega-challenge
+   ```
+
+3. To check, type `/mcp` in the `codex` terminal UI. It lists your active servers.
+
+Source: https://learn.chatgpt.com/docs/extend/mcp
+
+### Cursor
+
+1. Open `~/.cursor/mcp.json` (make the file if it does not exist) and add the server. If the file already has servers, add only the mega-challenge entry inside `mcpServers`:
+
+   ```
+   {
+     "mcpServers": {
+       "mega-challenge": {
+         "url": "https://hq.mega.dev/mcp"
+       }
+     }
+   }
+   ```
+
+2. Open **Customize** in the Cursor sidebar and find mega-challenge. When Cursor asks you to sign in to it, do so in the browser that opens.
+3. No connection? Open the Output panel (`Cmd+Shift+U`) and select "MCP Logs".
+
+Source: https://cursor.com/docs/mcp
+
+### VS Code (GitHub Copilot)
+
+1. Open the Command Palette (`Cmd+Shift+P` on macOS, `Ctrl+Shift+P` on Windows and Linux) and run `MCP: Open User Configuration`. Add the server inside `servers`:
+
+   ```
+   {
+     "servers": {
+       "mega-challenge": {
+         "type": "http",
+         "url": "https://hq.mega.dev/mcp"
+       }
+     }
+   }
+   ```
+
+2. Save the file. When VS Code asks, confirm that you trust the server. On the first connection, VS Code opens a browser window for the sign-in.
+3. To start it or read its log, run `MCP: List Servers`, select mega-challenge, and choose an action.
+
+Source: https://code.visualstudio.com/docs/agent-customization/mcp-servers
+
+### Claude Desktop
+
+1. Go to **Customize > Connectors**. Click **+ Add**, then **Add custom connector**.
+2. Enter the name `mega-challenge` and this remote MCP server URL, then click **Continue**:
+
+   ```
+   https://hq.mega.dev/mcp
+   ```
+
+3. Keep the authentication settings Claude found and click **Continue**. Under **Authentication**, choose **Sign in now**. Under **OAuth client**, choose **Register automatically**. Click **Add**, then finish the sign-in in your browser.
+4. In a chat, click **+** (lower left), then **Connectors**, and turn on mega-challenge.
+5. Claude connects to the server from Anthropic's cloud, not from your computer. On the Free plan you can add one custom connector.
+
+Source: https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp
+
+## For humans
+
+- Start here, then the Challenges (sign-in needed): https://hq.mega.dev/challenges
+- Lessons (sign-in needed): https://hq.mega.dev/lessons
+- Home: where the Student is in the course (sign-in needed): https://hq.mega.dev/
+
+## Notes
+
+- Only enrolled Students can take part. An email that is not on the course roster gets no sign-in link.
+- Do each Challenge yourself first. Your human signs in, sets up accounts, approves and makes the calls the Challenge gives them; tell them plainly when a step needs something you do not have.

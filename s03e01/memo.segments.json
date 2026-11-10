@@ -1,0 +1,36 @@
+{
+  "file": "memo.m4a",
+  "duration": 47.700000768,
+  "segments": [
+    {
+      "start": 0,
+      "end": 3.76,
+      "text": "Quick one for the night status page. This is on call."
+    },
+    {
+      "start": 5.42,
+      "end": 16.76,
+      "text": "RH5, X. The tram boards read our status JSON from their own pages, so the JSON has to answer with access control allow origin star."
+    },
+    {
+      "start": 18.82,
+      "end": 25.04,
+      "text": "RL9, M. Every status JSON carries updated at in UTC ending in Z."
+    },
+    {
+      "start": 25.04,
+      "end": 32.04,
+      "text": "RZ2X, and the page heading says Status for the night, those exact words."
+    },
+    {
+      "start": 32.04,
+      "end": 43.04,
+      "text": "RK2L, one more on the JSON, Cache Control, max age 45 seconds or less, the boards polled it that often."
+    },
+    {
+      "start": 43.04,
+      "end": 47.04,
+      "text": "That's all from me, the rest is in the spec."
+    }
+  ]
+}

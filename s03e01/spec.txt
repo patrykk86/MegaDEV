@@ -1,0 +1,62 @@
+Night status page — spec
+service             sched-prod
+owner               rune
+from                product
+state               draft for the build
+
+
+
+What it is
+
+A public page that says what happened to sched-prod during the night, so support can point people
+at one link instead of answering the same question again.
+
+It is a page people read and a JSON other systems read. Both say the same thing.
+
+
+Requirements
+
+Tagged ones are the ones we hold the build to. Untagged lines are context.
+
+
+   One row per incident: when it opened, when it closed, what it touched.
+
+
+   R-L2Z — Newest incident at the top.
+
+
+   R-K5Z — Each incident names who ran it.
+
+
+   Keep it plain. No login, no tracking, no cookie banner.
+
+
+
+Data
+
+Incidents come from the ops feed, on the course site: /challenges/status-for-the-night/api/in
+cidents/111cc74e5b37. It is JSON and updates through the night.
+
+The page's own JSON is status.json, beside the page. Its fields: updatedAt (when the data was
+read) and incidents (the rows).
+Formats
+
+   Times in 24-hour form, HH:MM.
+
+
+   R-Z2L — Dates are shown day first: 03/11. This is the format the night shift writes in its notes.
+
+
+
+Scope
+
+   R-K8X — Last night only. Nothing older stays on the page.
+
+
+   Out of scope: search, subscriptions.
+
+
+
+
+sched-prod · night status page                                                                     2/2
+

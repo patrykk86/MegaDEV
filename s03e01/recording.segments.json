@@ -1,0 +1,41 @@
+{
+  "file": "recording.mp4",
+  "duration": 27.263,
+  "segments": [
+    {
+      "start": 0.18,
+      "end": 1.86,
+      "text": "Okay, I'm sharing my screen."
+    },
+    {
+      "start": 2.25,
+      "end": 4.49,
+      "text": "This is the draft for tonight's status page."
+    },
+    {
+      "start": 6.18,
+      "end": 7.46,
+      "text": "RK4H"
+    },
+    {
+      "start": 7.89,
+      "end": 12.69,
+      "text": "Every line gets its own row on the page, tram 3 included. The boards care about that one."
+    },
+    {
+      "start": 14.28,
+      "end": 15.44,
+      "text": "Hold on."
+    },
+    {
+      "start": 20.04,
+      "end": 23.08,
+      "text": "Right, that's product. The rest is on call and the spec."
+    },
+    {
+      "start": 24.72,
+      "end": 26.56,
+      "text": "Ping me if something doesn't add up."
+    }
+  ]
+}

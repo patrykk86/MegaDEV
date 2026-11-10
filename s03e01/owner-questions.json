@@ -1,0 +1,68 @@
+{
+  "list": "requirements.json",
+  "generatedAt": "2026-11-10T20:07:19.433Z",
+  "open": 3,
+  "questions": [
+    {
+      "id": "Q1",
+      "owner": "product",
+      "tag": "R-M9H",
+      "with": "R-Z2L",
+      "question": "R-M9H says dates go month first like the boards; R-Z2L says day first, 03/11, the way the night shift writes. Which format ships on the page?",
+      "source": {
+        "file": "screenshot.png",
+        "region": {
+          "x": 0.74,
+          "y": 0.35,
+          "w": 0.18,
+          "h": 0.13
+        }
+      },
+      "status": "open",
+      "answer": null,
+      "who": null,
+      "routedBecause": "the other side names an owner"
+    },
+    {
+      "id": "Q2",
+      "owner": "product",
+      "tag": "R-Z3L",
+      "with": "R-K8X",
+      "question": "R-Z3L says keep the whole week on the page; R-K8X says last night only and nothing older stays. Which scope ships?",
+      "source": {
+        "file": "whiteboard.jpg",
+        "region": {
+          "x": 0.18,
+          "y": 0.44,
+          "w": 0.31,
+          "h": 0.07
+        }
+      },
+      "status": "open",
+      "answer": null,
+      "who": null,
+      "routedBecause": "the other side names an owner"
+    },
+    {
+      "id": "Q3",
+      "owner": "on-call",
+      "tag": "R-K5Z",
+      "with": "6045",
+      "question": "R-K5Z says each incident names who ran it; record 6045 (schedule rebuild, sched-prod, 03:50-04:04) has an empty author. Who ran 6045, or does it ship unnamed?",
+      "source": {
+        "file": "spec.pdf",
+        "region": {
+          "page": 1,
+          "x": 0.118,
+          "y": 0.497,
+          "w": 0.337,
+          "h": 0.016
+        }
+      },
+      "status": "open",
+      "answer": null,
+      "who": null,
+      "routedBecause": "the record names an owner"
+    }
+  ]
+}
