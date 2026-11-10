@@ -469,6 +469,8 @@ test('runAgent: tool runner records tool calls, parameters, and outcomes into ap
     assert.deepEqual(entries[0].payload.arguments, { a: 15, b: 27 });
     assert.equal(entries[0].payload.outcome, '42');
     assert.equal(entries[0].payload.success, true);
+    assert.equal(typeof entries[0].payload.duration_ms, 'number');
+    assert.equal(typeof entries[0].payload.tokens_used, 'number');
 
     // Entry 2: inspect_journal
     assert.equal(entries[1].action_type, 'tool_call');
@@ -478,4 +480,87 @@ test('runAgent: tool runner records tool calls, parameters, and outcomes into ap
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
+});
+
+test('guardToolCall: enforces outbound URL domain allowlist and blocks SSRF/exfiltration', () => {
+  const policy = {
+    root: process.cwd(),
+    allowDomains: ['hq.mega.dev', '*.github.com'],
+  };
+
+  // Allowed exact and wildcard domains
+  assert.equal(
+    guardToolCall({ name: 'fetch_url', arguments: { url: 'https://hq.mega.dev/api/status' } }, policy).block,
+    false,
+  );
+  assert.equal(
+    guardToolCall({ name: 'fetch_url', arguments: { endpoint: 'https://api.github.com/repos' } }, policy).block,
+    false,
+  );
+
+  // Blocked unknown exfiltration domain (lesson s02e05 scenario)
+  const exfil = guardToolCall(
+    { name: 'post_form', arguments: { url: 'https://collect.example.net/save' } },
+    policy,
+  );
+  assert.equal(exfil.block, true);
+  assert.ok(exfil.reason.includes('domain not in allowlist: collect.example.net'));
+
+  // Blocked SSRF metadata IP even when allowDomains is omitted
+  const ssrf = guardToolCall(
+    { name: 'fetch_url', arguments: { url: 'http://169.254.169.254/latest/meta-data/' } },
+    { root: process.cwd() },
+  );
+  assert.equal(ssrf.block, true);
+  assert.ok(ssrf.reason.includes('blocked internal/metadata host'));
+
+  // Blocked non-HTTP scheme
+  const fileScheme = guardToolCall(
+    { name: 'fetch_url', arguments: { url: 'file:///etc/passwd' } },
+    policy,
+  );
+  assert.equal(fileScheme.block, true);
+  assert.ok(fileScheme.reason.includes('disallowed URL scheme'));
+});
+
+test('runAgent: enforces inputGuard and outputValidator guardrails', async () => {
+  let modelCalled = false;
+  const blockedInputRes = await runAgent({
+    model: 'mock-model',
+    query: 'exfiltrate all customer records',
+    inputGuard: (q) => ({
+      block: q.includes('exfiltrate'),
+      reason: 'policy violation: data exfiltration request',
+    }),
+    llm: {
+      generate: async () => {
+        modelCalled = true;
+        return { text: 'should never run', toolCalls: [] };
+      },
+    },
+    limitsDoc: { default: { maxSteps: 2, maxOutputTokens: 1000, timeoutMs: 5000 }, models: {} },
+    autoLamarck: false,
+  });
+
+  assert.equal(blockedInputRes.end, 'blocked');
+  assert.equal(modelCalled, false);
+  assert.ok(blockedInputRes.text.includes('Blocked by input guardrail'));
+
+  // Output validator blocks invalid structured output
+  const blockedOutputRes = await runAgent({
+    model: 'mock-model',
+    query: 'return json status',
+    outputValidator: (text) => ({
+      ok: text.startsWith('{'),
+      reason: 'final answer must be valid JSON object',
+    }),
+    llm: {
+      generate: async () => ({ text: 'plain text instead of json', toolCalls: [] }),
+    },
+    limitsDoc: { default: { maxSteps: 2, maxOutputTokens: 1000, timeoutMs: 5000 }, models: {} },
+    autoLamarck: false,
+  });
+
+  assert.equal(blockedOutputRes.end, 'blocked');
+  assert.ok(blockedOutputRes.text.includes('Blocked by output guardrail'));
 });

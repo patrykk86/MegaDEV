@@ -208,3 +208,40 @@ test('cross-model self-reflection invariant enforcement (author !== reviewer)', 
   assert.equal(summary.reflections_passed, 1);
   assert.equal(summary.reflections_failed, 0);
 });
+
+test('journal telemetry: tracks duration_ms and tokens_used and identifies slowest/most expensive steps', (t) => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'journal-telemetry-'));
+  const journalPath = path.join(tmpDir, 'journal.jsonl');
+  t.after(() => fs.rmSync(tmpDir, { recursive: true, force: true }));
+
+  const day = '2026-11-06';
+  appendJournalEntry(
+    {
+      actor_id: 'orchestrator',
+      action_type: 'tool_call',
+      summary: 'Fast lookup',
+      duration_ms: 120,
+      tokens_used: 350,
+      day,
+    },
+    { journalPath },
+  );
+
+  appendJournalEntry(
+    {
+      actor_id: 'researcher',
+      action_type: 'tool_call',
+      summary: 'Deep synthesis',
+      duration_ms: 2400,
+      tokens_used: 4800,
+      day,
+    },
+    { journalPath },
+  );
+
+  const summary = getDailyJournalSummary(day, { journalPath });
+  assert.equal(summary.total_duration_ms, 2520);
+  assert.equal(summary.total_tokens_used, 5150);
+  assert.equal(summary.slowest_entry?.summary, 'Deep synthesis');
+  assert.equal(summary.most_expensive_entry?.summary, 'Deep synthesis');
+});

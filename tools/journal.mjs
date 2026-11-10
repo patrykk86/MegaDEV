@@ -184,7 +184,13 @@ export function appendJournalEntry(entryInput, options = {}) {
 
   // Recursively sanitize and redact outbound summary and payload to prevent at-rest secret/PHI leaks
   const cleanSummary = redactOutbound(String(entryInput.summary ?? ''));
-  const rawPayload = entryInput.payload ?? {};
+  const rawPayload = { ...(entryInput.payload ?? {}) };
+  if (entryInput.duration_ms !== undefined && rawPayload.duration_ms === undefined) {
+    rawPayload.duration_ms = Number(entryInput.duration_ms);
+  }
+  if (entryInput.tokens_used !== undefined && rawPayload.tokens_used === undefined) {
+    rawPayload.tokens_used = Number(entryInput.tokens_used);
+  }
   const cleanPayload = JSON.parse(redactOutbound(JSON.stringify(rawPayload)));
 
   const entry = {
@@ -285,6 +291,33 @@ export function recordCrossModelReflection({
   );
 }
 
+function pickHigherMetricEntry(currentBest, candidate, field) {
+  const value = Number(candidate.payload?.[field] ?? 0);
+  if (value <= 0) {
+    return currentBest;
+  }
+  const bestValue = Number(currentBest?.payload?.[field] ?? 0);
+  return !currentBest || value > bestValue ? candidate : currentBest;
+}
+
+function computeTelemetryStats(entries) {
+  let totalDurationMs = 0;
+  let totalTokensUsed = 0;
+  let slowestEntry = null;
+  let mostExpensiveEntry = null;
+
+  for (const e of entries) {
+    const dur = Math.max(0, Number(e.payload?.duration_ms ?? 0));
+    const tok = Math.max(0, Number(e.payload?.tokens_used ?? 0));
+    totalDurationMs += dur;
+    totalTokensUsed += tok;
+    slowestEntry = pickHigherMetricEntry(slowestEntry, e, 'duration_ms');
+    mostExpensiveEntry = pickHigherMetricEntry(mostExpensiveEntry, e, 'tokens_used');
+  }
+
+  return { totalDurationMs, totalTokensUsed, slowestEntry, mostExpensiveEntry };
+}
+
 /**
  * Generates an aggregated daily report across all actions and reflections for a given date.
  */
@@ -312,6 +345,8 @@ export function getDailyJournalSummary(day, options = {}) {
     }
   }
 
+  const telemetry = computeTelemetryStats(entries);
+
   return {
     day,
     total_entries: entries.length,
@@ -320,6 +355,10 @@ export function getDailyJournalSummary(day, options = {}) {
     reflections_count: reflections.length,
     reflections_passed: passedReflections,
     reflections_failed: failedReflections,
+    total_duration_ms: telemetry.totalDurationMs,
+    total_tokens_used: telemetry.totalTokensUsed,
+    slowest_entry: telemetry.slowestEntry,
+    most_expensive_entry: telemetry.mostExpensiveEntry,
     tasks,
     reflections,
   };

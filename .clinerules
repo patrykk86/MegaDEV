@@ -1,0 +1,116 @@
+# MegaDEV — Cline Operating Rules (MegaDEV Challenge Workspace)
+
+MegaDEV is the pure Node.js 25 challenge and agent harness workspace: `tools/`, the
+`s0Xe0Y/` challenge episodes, `support-kb/`, `mega-examples/` and `.agents/skills/`.
+
+MegaDEV is **not** BioCore-AI. Never import clinical (Flutter / FastAPI / PHI /
+OWASP-MASVS) invariants, skills or knowledge bases into this repository. The two
+projects stay dependency- and environment-isolated.
+
+---
+
+## 1. Single Source of Truth
+
+- **`AGENTS.md`** (root) is the canonical operating index. Obey it first; this file only
+  adds Cline-side routing, cost and hygiene rules.
+- **`memory/MEMORY.md`** holds learned soft rules. Append verified operational learnings.
+- **`.agents/skills/`** is MegaDEV's own skill set (`client-handoff`, `crew`, `keep`,
+  `knowledge`, `multi-source-worker`, `rig`, `rook-loop`, `skill-shaper`, `system-diff`).
+  Keep it as-is: do not mirror global/external skill registries over it.
+- **`.agents/mcp_config.json`** declares the MCP servers. Enable per task only (see §4).
+- **Agent history**: past decisions and challenge receipts live in the Antigravity
+  agent-brain transcripts (`transcript.jsonl`) under the operator profile's Gemini folder
+  (IDE `antigravity/brain/`, CLI `antigravity-cli/brain/`). Resolve that location from the
+  environment; never write a literal home path.
+
+## 2. Hard Security Invariants
+
+1. **No absolute paths.** Never write OS drive-letter roots, user-home directories or
+   `file:///` URLs into tracked files, configs, docs or messages. Resolve dynamically via
+   `import.meta.url`, `%~dp0`, or documented environment variables.
+2. **Challenge identity isolation.** Deliver with the challenge identity, never the
+   personal `bl8er` account or `github-mcp-server`; challenge commits use the challenge
+   noreply identity.
+3. **Secrets.** Credentials live only in `.env`. Every script or tool you write that
+   calls the Challenge Hub over HTTP must go through `tools/hub-client.mjs`, which masks
+   secrets in logs. Never hardcode tickets or keys and never echo `.env` values. The
+   `mega-challenge` MCP server is a separate operator-controlled transport (see §4) that
+   authenticates through the MCP auth flow; it is the single documented exception to the
+   hub-client path, and code must never add a second one.
+4. **No recursive shell crawls** (`dir /s`, `Get-ChildItem -Recurse`, `tree`, `find`).
+   Read targeted line ranges or use `jevgrep`.
+5. **Contract-first payloads.** Discover the contract (link headers, `schema.json`,
+   OpenAPI) before submitting. Never guess endpoint shapes.
+
+## 3. Model Routing — `.agents/model-routing.json`
+
+Live OpenRouter price card, verified 2026-11-07 (USD per 1M tokens):
+
+| Tier | Model | In | Out | Cache read |
+| :--- | :--- | ---: | ---: | ---: |
+| Conversation (chat, status, file reads) | `anthropic/claude-haiku-5.5` | 0.10 | 0.50 | 0.01 |
+| Reasoning (`routeModel` default for multi-file work) | `anthropic/claude-haiku-5.5` | 0.10 | 0.50 | 0.01 |
+| Validation / light loops | `deepseek/deepseek-v4.1-flash-20260910` | 0.051 | 0.567 | 0.018 |
+| Security audit / peer review (dispatched) | `deepseek/deepseek-v4.1-flash-20261017` | 0.15 | 0.60 | 0.003 |
+| Code, refactor, smells | `google/gemini-4-argon` | 2.00 | 10.00 | 0.10 |
+| Planning | `google/gemini-3.8-flash` | 0.825 | 4.125 | 0.0825 |
+| Contracts / schemas | `openai/gpt-6-luna` | 0.10 | 0.50 | 0.01 |
+
+**Banned for routine routing:** `openai/gpt-6-astra` (10.00 / 50.00) and
+`anthropic/claude-sonnet-5.5` (2.00 in / 10.00 out plus a cache-write penalty; not a
+routed tier). `gemini-4-argon` and `claude-sonnet-5.5` are **diff-scoped only** — they
+never read files, plan, or chat.
+
+**Token budgets** (mirrored in the JSON `budgets` block): `.clinerules` at most 9,000
+chars, `AGENTS.md` at most 12,000 chars, per-turn prompt target 30,000 tokens.
+
+Ids in the table are catalog aliases; `.agents/model-routing.json` records the canonical
+slugs that are actually routable and that appear in `tools/model-limits.json`.
+
+Routing invariants (non-negotiable):
+
+1. **One model per session (no silent switching).** The interactive chat uses only the
+   model the operator selected; never substitute a premium model for conversation.
+   Automated `routeModel` tier selection and reviewer dispatches are announced explicitly
+   with the exact model ID — they are not silent switches.
+2. **No security downgrades.** `routeModel` in `tools/agent-loop.mjs` matches
+   `SECURITY_SENSITIVE_PATTERN` (security, vulnerab, exploit, secret, credential, encrypt,
+   auth, compliance, gdpr, phi, pii) and routes it to `reasoningModel`
+   (`anthropic/claude-haiku-5.5-20261007`), never to the lightweight model. Independent
+   security audits and the peer-review loop are dispatched explicitly to the security tier
+   (`deepseek/deepseek-v4.1-flash-20261017`). Both mappings stay in parity with the JSON
+   mirror; `phi`/`pii` appear there because the guarded loop already screens for them.
+3. **Empirical limits.** Per-model steps, tokens and timeouts come from
+   `tools/model-limits.json` (mean x 1.5) via `runAgent()`. Never bypass the guarded loop.
+4. **Modular payloads.** Delegated prompts stay under 5,000 tokens and carry target
+   functions or diff hunks, not whole trees; no single delegated thread exceeds $0.50.
+5. **Cache discipline.** Keep the static prefix byte-stable. Batch edits to
+   `.clinerules`, `AGENTS.md` and tool schemas to session boundaries.
+6. **Reasoning cap.** The DeepSeek reviewer runs at medium effort; escalate to high only
+   for Tier 3 security work, and state why.
+7. **No provider racing** or benchmark fan-out during normal work.
+
+## 4. MCP Budget
+
+Every enabled MCP server injects all of its tool schemas into every request. The default
+state is **disabled**: `.cline/mcp.json` ships `{"mcpServers": {}}`. Enable
+`mega-challenge` (declared in `.agents/mcp_config.json`) only for the task that needs the
+Challenge Hub, then disable it again in the same session.
+
+That server is a Windows-first `npx`/`mcp-remote` transport, so it is an
+operator-controlled entry point, not something a generated script should reproduce. Pin
+the package version before relying on it in unattended automation, and never shell out to
+the same endpoint with inline credentials.
+
+## 5. Verification & Review (proportional)
+
+- Follow the blast-radius tiers in `AGENTS.md` §2: `doc_only` runs `node tools/check.mjs`;
+  `policy_change` runs check plus the synthetic eval matrix; `cross_cutting_security`
+  runs `node --run test`.
+- Non-trivial tool, skill or schema changes require the OpenRouter peer-review loop until
+  the reviewer returns an explicit **APPROVED / PASS** verdict. Include verbatim target
+  code and state that the target is the pure Node.js 25 MegaDEV repository. Cap each
+  dispatch at a 5,000-token payload and a maximum of 3 remediation rounds per change;
+  beyond that, stop and escalate the outstanding findings to the operator instead of
+  spending further.
+- **Never commit or push unless the operator asks.**

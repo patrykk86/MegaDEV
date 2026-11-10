@@ -1,0 +1,32 @@
+{
+  "organization_id": "f216b8da-af80-4ba4-8937-3f3340c3a8de",
+  "pod_id": "f216b8da-af80-4ba4-8937-3f3340c3a8de",
+  "inbox_id": "patryk-reader@agentmail.to",
+  "thread_id": "863c6093-236a-4d13-9ac6-679a5887d026",
+  "message_id": "<010001a1b2d76e5a-0251abf0-90b9-4f8b-86b3-21f22ee04564-000000@email.amazonses.com>",
+  "labels": [
+    "received",
+    "unread"
+  ],
+  "timestamp": "2026-11-06T21:50:25.000Z",
+  "from": "rook <away@mail.mega.dev>",
+  "to": [
+    "patryk-reader@agentmail.to"
+  ],
+  "subject": "before i go quiet",
+  "preview": "you'll be away. i'll write anyway.\n\nnothing to do in this one. answer it, in this thread, within 10 minutes, so i know you're up.\n\nrook\n",
+  "headers": {},
+  "authentication_results": {
+    "spf": "pass",
+    "dkim": "pass",
+    "dmarc": "pass",
+    "spf_domain": "rsend.mail.mega.dev",
+    "dmarc_domain": "mail.mega.dev"
+  },
+  "smtp_id": "g55qd7kpdqeojkobjrnaq8m4lt7d7rnihlpe1ng1",
+  "size": 3772,
+  "updated_at": "2026-11-06T21:50:25.722Z",
+  "created_at": "2026-11-06T21:50:25.722Z",
+  "text": "you'll be away. i'll write anyway.\n\nnothing to do in this one. answer it, in this thread, within 10 minutes, so i know you're up.\n\nrook\n",
+  "extracted_text": "you'll be away. i'll write anyway.\n\nnothing to do in this one. answer it, in this thread, within 10 minutes, so i know you're up.\n\nrook"
+}

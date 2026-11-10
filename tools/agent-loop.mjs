@@ -178,6 +178,64 @@ function checkCommandArgument(command, allow) {
   return null;
 }
 
+const URL_KEYS = ['url', 'endpoint', 'href', 'uri', 'webhook', 'webhookUrl', 'callbackUrl'];
+const SSRF_HOSTS = new Set(['169.254.169.254', 'metadata.google.internal', 'localhost', '127.0.0.1', '0.0.0.0', '[::1]', '::1']);
+
+function matchesAllowedDomain(hostname, allowDomains) {
+  const host = hostname.toLowerCase();
+  for (const rawPattern of allowDomains) {
+    const pattern = String(rawPattern).toLowerCase().trim();
+    if (!pattern) {
+      continue;
+    }
+    if (pattern.startsWith('*.')) {
+      const suffix = pattern.slice(2);
+      if (host === suffix || host.endsWith(`.${suffix}`)) {
+        return true;
+      }
+    } else if (host === pattern) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function validateSingleUrlValue(val, key, allowDomains) {
+  let parsed = null;
+  try {
+    parsed = new URL(String(val));
+  } catch {
+    return `invalid URL in ${key}: ${val}`;
+  }
+  if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+    return `disallowed URL scheme in ${key}: ${parsed.protocol}`;
+  }
+  const host = parsed.hostname.toLowerCase();
+  const hasAllowlist = Array.isArray(allowDomains);
+  const explicitlyAllowed = hasAllowlist && matchesAllowedDomain(host, allowDomains);
+  if (SSRF_HOSTS.has(host) && !explicitlyAllowed) {
+    return `blocked internal/metadata host in ${key}: ${host}`;
+  }
+  if (hasAllowlist && !explicitlyAllowed) {
+    return `domain not in allowlist: ${host}`;
+  }
+  return null;
+}
+
+function checkUrlArguments(args, allowDomains) {
+  for (const key of URL_KEYS) {
+    const val = args[key];
+    if (val === undefined || val === null || val === '') {
+      continue;
+    }
+    const err = validateSingleUrlValue(val, key, allowDomains);
+    if (err) {
+      return err;
+    }
+  }
+  return null;
+}
+
 export function guardToolCall(call, policy = {}) {
   const root = policy.root ?? process.cwd();
   const allow = policy.allowCommands ?? [];
@@ -191,6 +249,10 @@ export function guardToolCall(call, policy = {}) {
   if (cmdErr) {
     return { block: true, reason: cmdErr };
   }
+  const urlErr = checkUrlArguments(args, policy.allowDomains);
+  if (urlErr) {
+    return { block: true, reason: urlErr };
+  }
   return { block: false };
 }
 
@@ -198,7 +260,7 @@ function asError(message) {
   return JSON.stringify({ error: message });
 }
 
-function recordToolJournal(ctx, effective, outcome, err) {
+function recordToolJournal(ctx, state, effective, outcome, err, durationMs = 0) {
   if (!ctx.journalToolCalls) {
     return;
   }
@@ -220,6 +282,8 @@ function recordToolJournal(ctx, effective, outcome, err) {
           outcome: outcome ?? null,
           error: err ? (err?.message ?? String(err)) : null,
           success: isSuccess,
+          duration_ms: Math.max(0, Math.round(durationMs)),
+          tokens_used: state?.usage ?? 0,
         },
       },
       { journalPath: ctx.journalPath },
@@ -230,6 +294,7 @@ function recordToolJournal(ctx, effective, outcome, err) {
 }
 
 async function executeToolCall(fn, effective, ctx, state) {
+  const startMs = performance.now();
   try {
     const raw = await fn(effective.arguments ?? {}, { signal: ctx.signal });
     const text = typeof raw === 'string' ? raw : JSON.stringify(raw);
@@ -240,11 +305,11 @@ async function executeToolCall(fn, effective, ctx, state) {
       console.error(`[agent-loop] afterTool hook error: ${hookErr?.message ?? String(hookErr)}`);
     }
     const finalOutcome = truncate(replaced ?? text, ctx.maxResultChars);
-    recordToolJournal(ctx, effective, finalOutcome, null);
+    recordToolJournal(ctx, state, effective, finalOutcome, null, performance.now() - startMs);
     return finalOutcome;
   } catch (err) {
     const errText = asError(err?.message ?? String(err));
-    recordToolJournal(ctx, effective, null, err);
+    recordToolJournal(ctx, state, effective, null, err, performance.now() - startMs);
     return errText;
   }
 }
@@ -436,11 +501,20 @@ export function triggerLamarckAfterRun({
   }
 }
 
-function handleTerminalResponse(response, state, ctx, step) {
+async function handleTerminalResponse(response, state, ctx, options, step) {
   const cut = response.finishReason === 'length' || response.finishReason === 'max_output_tokens';
-  return cut
-    ? result('truncated', `${response.text ?? ''}\n\n[cut at ${ctx.limits.maxOutputTokens} output tokens]`, state, step)
-    : result('answer', response.text ?? '', state, step);
+  if (cut) {
+    return result('truncated', `${response.text ?? ''}\n\n[cut at ${ctx.limits.maxOutputTokens} output tokens]`, state, step);
+  }
+  const text = response.text ?? '';
+  if (typeof options.outputValidator === 'function') {
+    const validation = await options.outputValidator(text, response, state);
+    if (validation && validation.ok === false) {
+      const reason = validation.reason ?? 'output failed schema or policy validation';
+      return result('blocked', `Blocked by output guardrail: ${reason}`, state, step);
+    }
+  }
+  return result('answer', text, state, step);
 }
 
 function initContextualRecall(options, ctx, state) {
@@ -530,7 +604,7 @@ async function runAgentLoop(startStep, state, ctx, options, finish) {
     const calls = response.toolCalls ?? [];
 
     if (calls.length === 0) {
-      return finish(handleTerminalResponse(response, state, ctx, step));
+      return finish(await handleTerminalResponse(response, state, ctx, options, step));
     }
     if (state.usage > ctx.budgetTokens) {
       return finish(result('budget', `Stopped: token budget ${ctx.budgetTokens} exceeded (${state.usage}).`, state, step));
@@ -575,6 +649,21 @@ export async function runAgent(options) {
 
   initContextualRecall(options, ctx, state);
   const finish = createFinishCallback(effectiveOptions, ctx, state);
+
+  if (typeof options.inputGuard === 'function') {
+    const guardDecision = await options.inputGuard(options.query, state);
+    if (guardDecision?.block) {
+      const why = guardDecision.reason ?? 'input failed moderation or policy check';
+      return finish(result('blocked', `Blocked by input guardrail: ${why}`, state, 0));
+    }
+    if (typeof guardDecision?.sanitizedQuery === 'string') {
+      const lastIdx = state.messages.length - 1;
+      if (lastIdx >= 0 && state.messages[lastIdx].role === 'user') {
+        state.messages[lastIdx] = { role: 'user', content: guardDecision.sanitizedQuery };
+      }
+    }
+  }
+
   return runAgentLoop(1, state, ctx, effectiveOptions, finish);
 }
 
