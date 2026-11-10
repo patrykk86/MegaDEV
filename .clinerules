@@ -114,3 +114,17 @@ the same endpoint with inline credentials.
   beyond that, stop and escalate the outstanding findings to the operator instead of
   spending further.
 - **Never commit or push unless the operator asks.**
+
+## 6. Shell & Terminal Hygiene
+
+- **One shell per turn, commands batched.** Pass every independent command of a turn in a
+  single `run_commands` array; one call per command leaves a dead integrated terminal
+  behind. Split only where a later command reads an earlier result.
+- **Reclaim before answering.** A turn that opened more than one shell ends by listing the
+  idle `powershell.exe` children of the pty host (zero child processes, not the current
+  shell) and stopping them, so the operator never hunts tabs.
+- **No process outlives its task.** Dev servers, watchers, `npx` proxies and background
+  jobs are stopped in the turn that started them unless the operator asked for a standing
+  service; the PIDs go in the reply, not in the operator's memory.
+- Long-running work belongs in `schedule` or a background worker (AGENTS.md §4), never in
+  a foreground terminal held open for it.

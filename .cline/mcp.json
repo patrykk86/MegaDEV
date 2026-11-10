@@ -1,3 +1,16 @@
 {
-  "mcpServers": {}
+  "mcpServers": {
+    "mega-challenge": {
+      "command": "npx.cmd",
+      "args": [
+        "-y",
+        "mcp-remote@0.16.5",
+        "https://hq.mega.dev/mcp",
+        "--transport",
+        "http-only",
+        "--auth-timeout",
+        "900"
+      ]
+    }
+  }
 }

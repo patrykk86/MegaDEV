@@ -10,6 +10,11 @@ requests.log
 node_modules/
 .audits/
 .runs/
+.copilot/
+.gemini/
+.cline/*
+# the project-level MCP declaration is tracked on purpose, so this negation keeps it in view
+!.cline/mcp.json
 tools/gateway/node_modules
 # mega-examples is an independent cloned git repository (updated via `git -C mega-examples pull`)
 /mega-examples/
@@ -23,3 +28,15 @@ s[0-9][0-9]e[0-9][0-9]/sessions-archive.json
 s[0-9][0-9]e[0-9][0-9]/requests.log
 s[0-9][0-9]e[0-9][0-9]/job-[0-9]*/
 .aider*
+# KEEP.md is a machine-local hand-off note; its Can run block records absolute tool paths
+/KEEP.md
+# Copied agent-brain transcripts are machine-local knowledge, never committed
+/memory/antigravity-brain/
+s03e01/transcript.md
+s03e01/lesson-raw.txt
+s03e01/brain-knowledge.md
+memory/MEMORY.md
+s03e01/inbox-raw.json
+s03e01/lesson.md
+s03e01/LESSON-NOTES.md
+.cline/mcp.json

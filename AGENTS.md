@@ -1,84 +1,126 @@
 # AGENTS.md
 
-## Core Agent Operating Rules
+MegaDEV is a pure Node.js 25 workspace: an agent harness in `tools/`, course episodes in `s0Xe0Y/`,
+a knowledge base in `support-kb/`, examples in `mega-examples/`, skills in `.agents/skills/`. This
+file is the entry point - the hard rules, one line each, with the detail behind a pointer. Cost,
+routing and shell hygiene live in [`.clinerules`](./.clinerules); learned rules live in
+[`memory/MEMORY.md`](./memory/MEMORY.md); episode detail lives in
+[`.agents/rules/challenge_playbook.md`](./.agents/rules/challenge_playbook.md).
 
-### 1. Project Boundaries & Entrypoints
-- **MegaDEV** and **BioCore-AI** (sibling workspace `../biocore_ai` or `../Projekt Hajs/biocore_ai`) are distinct projects with separate dependencies. Skills located in sibling `.agents/skills` (such as `code-review`, `openrouter-luna`, `jevgrep`, `changelog`) may be referenced and leveraged for MegaDEV tasks when useful, while keeping dependencies and environment configurations isolated.
-- **Strict Relative Path Invariant**: Never use hardcoded absolute filesystem paths (such as drive letters `C:\`, `D:\`, or user home directories `/home/`, `/Users/`) in any files tracked in the repository or sent to GitHub. All scripts, tooling, tests, documentation, and agent operations must strictly resolve paths dynamically via relative paths, project-relative roots (`import.meta.url`, `%~dp0`, `Path(__file__)`), or documented environment variables.
-- When working inside [`mega-examples/`](./mega-examples/AGENTS.md), follow its top-of-file **Rules for coding agents**. Never run `npx mex` from the workspace root; run `npm --prefix mega-examples start -- <name>` or `cd mega-examples`.
-- **Challenge Account Isolation**: Never use the user's primary personal GitHub account (`bl8er`) or `github-mcp-server` for course challenge deliverables. Use the designated challenge identity (`patrykk86`) via authenticated browser DevTools or scoped credentials, and commit using `patrykk86 <patrykk86@users.noreply.github.com>`.
-- **Challenge GitHub Token Scoping**: When challenges spawn dedicated repositories from course templates, ensure credentials carry repository-wide issue and push permissions (`repo` scope), avoiding single-repo-scoped fine-grained token 403 blocks.
+This file stays at or under 12,000 characters. A rule that needs a paragraph belongs in a skill, a
+tool schema or a playbook, not here.
 
-### 2. Autonomous Execution & Proportional Verification (Trust Pyramid)
-- Proceed autonomously on all internal project work (reading, editing, running local tests/checks). Only ask the user before modifying host/system-wide settings or making paid external model calls in `mega-examples`.
-- **Proportional Verification Principle**: Verify changes in proportion to their impact and blast radius, rather than executing blanket full-suite test runs on every minor edit.
-  - *Reasoning*: Blanket test mandates create unnecessary latency and waste compute on localized edits. The agent must evaluate the change's blast radius and execute targeted deterministic checks.
-  - *Deterministic Blast-Radius Scopes*:
-    - `localized_code`: Single module or utility edits run targeted unit tests.
-    - `doc_only`: Pure documentation edits (excluding policy files) run `node tools/check.mjs` for tracked file hygiene.
-    - `policy_change`: Changes modifying `AGENTS.md`, `SKILL.md`, `workspace_rules.md`, or `*.tool.json` strictly mandate executing the synthetic evaluation matrix (Section 5) in addition to static analysis.
-    - `cross_cutting_security`: Changes touching `tools/agent-guard.mjs`, `tools/agent-loop.mjs`, `tools/journal.mjs`, or workspace root architecture require full workspace static analysis (`node --run test`).
-  - *Transparency*: Always report which verification commands were executed and why.
-- **Multi-Model Peer Review Mandate & Iterative Verification Loop (OpenRouter)**: Whenever new tools, skills, schemas (`*.tool.json`), or non-trivial code modifications are authored, the agent must dispatch a cross-model review to an independent external model via OpenRouter (`ask_openrouter` on `worker-bridge` with `target_files` and verbatim context embedded in the prompt; e.g. `mode: "review"` for Fowler code smells and architectural critiques, or `mode: "security"` / `deepseek/deepseek-v4.1-flash-1017` for security and secret checks) before declaring completion. **Never stop after implementing fixes from a first audit**: whenever the reviewer returns `FAIL`, `REJECT`, or `CONDITIONAL PASS` with blocking findings, the agent must remediate the findings, run deterministic tests, and **re-call `ask_openrouter` in an iterative verification loop as many times as needed until the reviewer explicitly verifies the fixes and returns an `APPROVED / PASS` verdict**.
-- **Check Existing Handoff Assets First**: Before running package installs or rebuilding project scaffolding, inspect previous episode handoffs (e.g., `rig-handover/`) or local build trees to reuse verified node_modules and configurations.
+## 1. Boundaries and entry points
+- MegaDEV and BioCore-AI are separate projects with separate dependencies; never import clinical
+  skills or knowledge bases here. Sibling skills may be read for technique only.
+- No absolute filesystem paths in tracked files: resolve through `import.meta.url` with
+  `fileURLToPath`, or a documented environment variable. `%~dp0` is for `.cmd` launchers only.
+- `mega-examples/` is its own git repo: run `npm --prefix mega-examples start -- <name>`, never
+  `npx mex` from the root.
+- Course deliverables use the challenge identity, never the operator's personal account or
+  `github-mcp-server`.
 
-### 3. Canonical Toolbox & Protocols
-- **Transcriber & Handoff CLI**: [`tools/transcribe.mjs`](./tools/transcribe.mjs) (`bin/transcribe.cmd`). Prefer fast native Node 25+ runtimes; do not create duplicate Python/ad-hoc segment parsers.
-- **Challenge Hub Client**: [`tools/hub-client.mjs`](./tools/hub-client.mjs). Single canonical client (ES module + CLI) reading `MEGADEV_KEY` and `MEGADEV_TICKET` from `.env` and masking secrets in logs automatically.
-- **Multi-Source Isolation Protocol**: When handling multiple recordings or clocks, follow [`multi-source-worker`](./.agents/skills/multi-source-worker/SKILL.md) and validate outputs with `node tools/transcribe.mjs --validate-handoff` and `--aggregate`.
-- **Subagent Source Isolation**: For multi-stream media or multi-clock feeds, invoke dedicated subagents (`invoke_subagent`) per source to prevent LLM context blending across clocks.
-- **Cross-Session Continuity**: When a challenge pauses for a new session (`resume-challenge`), write all intermediate findings to disk in structured hand-off files first. In the new session, work directly from the resumed record and persisted hand-offs without re-downloading or re-processing raw media.
-- **Cross-Surface Brain Continuity (IDE <-> CLI)**: When continuing an active task across Antigravity IDE (`~/.gemini/antigravity/brain/`) and Antigravity CLI (`~/.gemini/antigravity-cli/brain/`), inspect the most recently modified `transcript.jsonl` / `transcript_full.jsonl` across both brain directories alongside `.runs/<job>/result.json` and `s0Xe0Y/requests.log` to resume interrupted post-solve steps (such as `debrief`) without re-running completed jobs.
-- **Challenge Claim & Debrief Envelope Validation**: Never copy escaped quote marks (`\"job-1\"`) from templates into `claim-challenge` `receipts` keys; when `claim-challenge` reports `no receipt holds`, inspect the envelope keys before re-running accepted jobs. Before calling `debrief`, verify all field length constraints (`<= 160` chars for `extras[].what`, `snags[].snag`, `snags[].resolve`, and `rightCall.why`; `<= 5` words for `catches[].capability.name`).
-- **Exported Domain Logic Grounding**: For knowledge systems and data exports (e.g. `support-kb`), ground counts and taxonomy in the exported runtime logic (`causes.ts`, components) rather than ad-hoc text heuristics. Keep prose free of hardcoded dynamic numbers.
-- **Two-Phase Challenge Lifecycle & Reviewer Gating**: When a challenge notes the desk or reviewer continues working (`status: "progress"` or `"retry"`), treat it as an active wait. Never close review/preview issues upon sending links; issues waiting on external inspection must remain OPEN until the reviewer acknowledges inspection. Clean-up tasks must remain blocked by the review gate.
-- **Zero-Dependency Public Previews**: For deliverables requiring temporary public HTTPS previews, deploy standalone HTML to an orphan `gh-pages` branch on the challenge repo (`https://<user>.github.io/<repo>/`), avoiding external hosting dependencies.
-- **Persistent Hosts for Inbound Webhooks**: Reviewer ping and webhook endpoints require always-on cloud hosts (e.g., Firebase Cloud Functions, Cloudflare Workers, VPS). Ephemeral local tunnels (`trycloudflare.com`, ngrok) are rejected by course inspection gates.
-- **Contract-First Payloads**: Never guess endpoint payload shapes. Locate formal contracts via machine-readable link headers (`rel="service-desc"`, `rel="describedby"`), `schema.json`, or OpenAPI before submitting data.
-- **Masked Evidence Logging**: Maintain an append-only `s01eXX/requests.log` for every challenge interaction, recording timestamps, requests, and responses with secrets masked via `tools/hub-client.mjs` to preserve evidence against conversation compaction.
-- **Live Grounding for Mutable Entities**: Always verify fast-moving identifiers (models, API versions, prices) against official live documentation rather than relying on parametric memory.
-- **Live Re-Check for Asynchronous Source Feeds**: Never finalize plans, check-ins, or build deliverables solely based on an initial handoff snapshot. Upstream teams, CI runners, and challenge feeds push late asynchronous revisions (e.g. host ports, image versions, database names) during active migration runs. Always re-poll live source archive URLs, feeds, or remote endpoints before submitting deliverables and before declaring task completion, ensuring late-breaking decisions override stale handoffs.
-- **Conversational Thread Context Reconstruction**: For asynchronous multi-turn channels (email threads, issue comments, webhook callbacks), follow-up requests frequently omit initial links, files, or reference data. Before model invocation, the harness must fetch the full thread/history chain to accumulate referenced URLs, prior questions, and answers into the prompt context.
-- **Bidirectional Tool-Skill Augmentation & Progressive Discovery**: Break the silo between executable tools and modular agent skills:
-  - *Tools Advertise Skills*: Custom MCP servers, CLI utilities in `tools/`, and native tool schemas must declare compatible skills in their descriptions or metadata (pointing agents to procedural skills like `multi-source-worker`, `rook-loop`, or `knowledge` that guide complex workflows).
-  - *Skills Reference Augmented Tools*: Skill manifests in `.agents/skills/<name>/SKILL.md` must explicitly declare the canonical tools, CLIs, or MCP endpoints they augment and guide (in frontmatter `metadata.tools` or instruction headers).
-  - *Progressive Discovery*: Expose lean, minimal tool schemas upfront to preserve context window budgets. Dynamically load specialized skills on-demand only when non-trivial workflows, edge cases, or formatting conventions require deep procedural guidance.
-  - *Loose Coupling*: Tools remain directly executable by models for simple calls without requiring full skill ingestion; skills provide high-level workflows even if specific tools are unavailable or mocked.
+## 2. Autonomous execution and proportional verification
+- Act on internal work without asking: reading, editing, local commands, local tests. Ask before
+  host-wide or system-wide changes, and before paid model runs in `mega-examples`.
+- Verify by blast radius, not with blanket suites, and report which command ran and why:
+  - `localized_code` - targeted unit tests for the module or utility touched.
+  - `doc_only` - `node tools/check.mjs`.
+  - `policy_change` - `AGENTS.md`, `SKILL.md`, `.agents/rules/*`, `*.tool.json`: the synthetic
+    matrix of section 5, plus static analysis.
+  - `cross_cutting_security` - `tools/agent-guard.mjs`, `tools/agent-loop.mjs`,
+    `tools/journal.mjs`, root architecture: `node --run test`.
+- Peer review gates non-trivial work, but the loop itself is not restated here: `.clinerules` §5
+  owns the reviewer tier, the evidence a dispatch must carry and the round cap. Report the verdict
+  and what changed, never "reviewed" on its own.
+- Reuse what was already verified: check hand-offs (`rig-handover/`, an existing `node_modules`)
+  before installing or scaffolding again.
+## 3. Toolbox
+One canonical tool per job, and each tool carries its own contract. The table lists the tools that
+publish a schema: read that `.tool.json` before the call, because the schema, not memory, is the
+contract. A module named anywhere without a schema of its own is reached through
+`tools/agent-loop.mjs`, whose guard is the contract.
 
-### 4. Background Workers & Asynchronous Delegation Protocol
-- **Non-Blocking Coordination**: The primary agent acts as coordinator and must never stall user interaction while waiting for long-running jobs. Delegate intensive processing (audits, digest collation, batch transforms) to asynchronous background workers or subagents via `invoke_subagent` or `schedule`.
-- **Living Standby Watchers**: When a challenge notes the reviewer continues working (`status: "progress"` or `"retry"` with `retryAfter`), keep an active background watcher or timer alive to monitor the verdict autonomously and alert the coordinator without prompting the user.
-- **Persisted Job Handoffs**: Workers must communicate intermediate steps and final outcomes through structured disk-backed handoff records (`.runs/<job-id>/result.json` or append-only task logs) rather than relying on conversational memory. Always scrub raw `v1.eyJ...` step and receipt tokens before writing `.runs/` or `execution-result.json` files so `node tools/check.mjs` secret hygiene passes.
-- **Remote CI Worker Dispatch & Encrypted Return (`two places` Pattern)**: When delegating an isolated MCP job to a remote GitHub Actions runner (`patrykk86`), keep active course hosts (`megadevpat`) isolated, store encryption keys in GitHub Actions repository secrets rather than plaintext `workflow_dispatch` inputs, mask decrypted job URLs with `::add-mask::`, dynamically inspect `tools/list` (`inputSchema.required`) and nested record payloads (`fields`), and return results via an AES-256-GCM encrypted bundle in the job log.
-- **Signal-Driven Wakeup**: Background workers notify the coordinator on completion; avoid busy-polling loops.
+| Job | Tool | Contract | Skill |
+| :--- | :--- | :--- | :--- |
+| Challenge Hub HTTP | [`tools/hub-client.mjs`](./tools/hub-client.mjs) | [`hub-client.tool.json`](./tools/hub-client.tool.json) | - |
+| Transcription | [`tools/transcribe.mjs`](./tools/transcribe.mjs) | [`transcribe.tool.json`](./tools/transcribe.tool.json) | [`multi-source-worker`](./.agents/skills/multi-source-worker/SKILL.md) |
+| Static gate | [`tools/check.mjs`](./tools/check.mjs) | [`check.tool.json`](./tools/check.tool.json) | - |
+| Skill gate | [`tools/check-skills.mjs`](./tools/check-skills.mjs) | [`check-skills.tool.json`](./tools/check-skills.tool.json) | [`skill-shaper`](./.agents/skills/skill-shaper/SKILL.md) |
+| Knowledge base check | [`tools/kb-check.mjs`](./tools/kb-check.mjs) | [`kb-check.tool.json`](./tools/kb-check.tool.json) | [`knowledge`](./.agents/skills/knowledge/SKILL.md) |
+| Tool ledger | [`tools/journal.mjs`](./tools/journal.mjs) | [`journal.tool.json`](./tools/journal.tool.json) | - |
+| Recall of past sessions | [`tools/memory/contextual-recall.mjs`](./tools/memory/contextual-recall.mjs) | [`contextual-recall.tool.json`](./tools/contextual-recall.tool.json) | [`rook-loop`](./.agents/skills/rook-loop/SKILL.md) |
+| System diff of a PR | [`tools/system-diff-build.mjs`](./tools/system-diff-build.mjs) | [`system-diff.tool.json`](./tools/system-diff.tool.json) | [`system-diff`](./.agents/skills/system-diff/SKILL.md) |
+| Client deliverable | [`tools/client-handoff.mjs`](./tools/client-handoff.mjs) | [`client-handoff.tool.json`](./tools/client-handoff.tool.json) | [`client-handoff`](./.agents/skills/client-handoff/SKILL.md) |
 
-### 5. Synthetic Evaluation Gate for Skills & Instructions
-- **Matrix-Driven Verification**: Never validate edits to agent instructions (`AGENTS.md`) or skills (`SKILL.md`) solely on hand-picked happy paths. Always generate and run a synthetic permutation matrix crossing user intent variants, edge cases, and constraint violations.
-- **Policy-as-Code Assertion**: Ground evaluations in deterministic code-level assertions rather than subjective LLM self-reviews. Compare versioned pass rates and diffs before landing skill updates.
+- Course traffic goes through `hub-client.mjs`, the single client, which masks secrets; the
+  evidence-log format itself is owned by `challenge_playbook.md`.
 
-### 6. Layered Defense & Outbound Redaction Protocol
-- **Deterministic Input Sanitization**: Clean all untrusted external content (emails, web fetches, challenge feeds) through a deterministic pre-processor that strips hidden elements (`display:none`), normalizes unicode lookalikes, decodes base64/hex payloads, and filters common injection patterns before passing text to model contexts.
-- **Outbound Redaction Gate**: All network-facing tools and logging pipelines must run through an automated masking filter (as in `tools/hub-client.mjs`) to scrub tokens, keys, credentials, and sensitive internal paths before transmission.
-- **Least-Privilege Tool Scoping**: Do not grant irreversible write, network dispatch, or credentialed tools to agents processing untrusted external inputs without an explicit user approval gate.
-- **Read/Write Agent Separation & Webhook Verification**: In autonomous host deployments, separate rights strictly between reading (e.g. answer-only) and writing (e.g. test or mutation) agents in rights manifests. Always cryptographically verify incoming webhook signatures (HMAC-SHA256) before executing actions.
-- **Inbound Channel Authentication Gate**: Autonomous agents exposing public or semi-public communication endpoints (email, webhooks, Slack/Telegram bots, queues) must deterministically authenticate sender identity in code BEFORE executing any tool, fetching links, or invoking the model. Messages from unverified or untrusted senders must be dropped or rejected with zero model execution and zero side effects.
-- **Channel Identity Isolation on Policy Violation**: If an external channel identity (e.g. an email address, inbox, webhook URL, or session ID) becomes tainted by an unauthorized interaction or test rejection, do not continue submitting from the tainted address. Provision a fresh, isolated channel identity to prevent persistent historical delivery records from invalidating subsequent verification rounds.
+## 4. Background work and delegation
+- The coordinator never stalls on a long job. Delegate through the
+  [`crew`](./.agents/skills/crew/SKILL.md) skill, `tools/scheduler/runner.mjs` or
+  `tools/gateway/task-bridge.mjs`; a detached job reports its PID, log path and result path in the
+  turn that starts it, and its log is read before anything else happens.
+- Results land on disk (`.runs/<job>/result.json`), scrubbed of tokens, never in conversation
+  memory alone; workers signal completion instead of being polled in a loop.
+- Work that stays open waits behind a standing watcher, not a held terminal.
 
-### 7. Guarded Agent Execution & Lamarckian Memory Evolution
-- **Guarded Agent Loop**: Every autonomous loop runs via [`tools/agent-loop.mjs`](./tools/agent-loop.mjs), enforcing empirical model limits (`tools/model-limits.json`), sandboxed path checks, shell allowlisting, and error containment. Any tool call modified or rewritten by a `beforeTool` hook must be strictly re-evaluated against the security guard policy before invocation.
-- **Fail-Closed & Prototype-Safe Dispatch**: Tool dispatch must strictly verify own-properties (`Object.hasOwn`), rejecting prototype pollution attempts (`__proto__`, `constructor`, `toString`). Security policy defaults must fail-closed (default-deny on empty/missing policies).
-- **Adversarial Command & Secret Boundaries**: Shell checking must reject all command chaining, subshells, and execution modifiers (`;`, `&&`, `||`, `&`, `$()`, backticks, redirects). Secret filtering must comprehensively cover `.env*`, `.ssh/id_rsa`, `*.pem`, `*.key`, `.npmrc`, credentials manifests, and out-of-root traversals.
-- **Deterministic Test Hygiene & Precision Assertions**: Guard test suites must enforce exception-safe cleanup (`t.after()`), collision-free session identifiers (`crypto.randomUUID()`), exact rule set assertions (`assert.deepEqual`), and ID-based tool call message correlation (`tool_call_id`) with derived arithmetic constants.
-- **Lamarckian Inter-Session Evolution**: At the conclusion of successful agent sessions (`end === 'answer'`), Lamarck (`lamarck --project <workspaceRoot>`) triggers asynchronously via `triggerLamarckAfterRun`. It enforces re-entrancy prevention (`LAMARCK_ACTIVE`), traps spawn errors (`child.on('error')`), and routes LLM reflection calls through the local worker-bridge via `bin/claude.cmd` (`CLAUDE_BIN`). On Windows, it spawns Node directly against the entry point to avoid `.cmd` shell invocation risks.
-- **Context Budget Priority**: Dynamic project learnings in `memory/MEMORY.md` are loaded as soft rules via [`tools/memory/rule-budget.mjs`](./tools/memory/rule-budget.mjs). If the active context exceeds 20,000 tokens / 24KB, soft rules are demoted into the advisory manifest, preserving invariant hard rules in `AGENTS.md`.
+## 5. Synthetic evaluation gate
+- Instruction and skill changes are never validated on happy paths. Run the permutation matrices -
+  `node tools/eval-agent-primitives.mjs`, `node tools/eval-agents-capabilities.mjs`,
+  `node tools/eval-skill.mjs` - and compare pass rates, not impressions.
+- Assertions are code (`node:assert`), never a self-review.
 
-### 8. Contextual Recall Pipeline & Resumable Tool Approvals
-- **Contextual Recall Pipeline**: Retrieve past session notes, handoffs, and domain facts dynamically using hybrid sparse vector similarity and knowledge graph tag/link boosting ([`tools/memory/contextual-recall.mjs`](./tools/memory/contextual-recall.mjs)). Queries are grounded in active user conversation turns and pre-injected into the agent loop before model invocation, strictly bounded by the token and byte budget in [`tools/memory/rule-budget.mjs`](./tools/memory/rule-budget.mjs) without context window bloat.
-- **Durable Resumable Approvals**: Tool approvals requiring human authorization across sessions or days must not hold blocking interactive prompts or long-running process threads. The guarded agent loop serializes execution state and tool call metadata into a durable, HMAC-SHA256 tamper-proof suspension record (`.approvals/<approval-id>.json` via [           `tools/resumable-approval.mjs`](./tools/resumable-approval.mjs)), cleanly exiting with `{ end: 'suspended' }`. Resumption via `resumeAgent` restores state, validates tamper-proof fingerprints and TTL expiration, executes or rejects the pending tool call with recorded user feedback, and completes the loop autonomously.
+## 6. Layered defense and redaction
+- Untrusted text (mail, fetched pages, feeds) passes `tools/sanitize.mjs` before it reaches a model
+  context, and network-facing tools and logs pass an outbound masking filter.
+- Least privilege: an agent handling untrusted input gets no irreversible write, dispatch or
+  credentialed tool without an approval gate.
+- Inbound channels authenticate the sender in code before any tool, link fetch or model call, and
+  verify webhook signatures (HMAC-SHA256) with `crypto.timingSafeEqual`, inside a bounded clock
+  window and against a one-time nonce, dropping unverified, stale or replayed messages with zero
+  side effects.
+- No plaintext PHI or PII in prompts, logs, the journal, `.runs/`, `.approvals/` or hand-offs;
+  clinical data never enters this repository.
+- Errors and refusals never echo inputs, secrets or payloads.
+- A channel identity tainted by a failed or unauthorized round is replaced, not reused.
 
-### 9. Persistent Tool Journaling, Anti-Downgrade Routing & Ambient Signals
-- **Cryptographic Tool Ledger**: The guarded tool runner in [`tools/agent-loop.mjs`](./tools/agent-loop.mjs) must record all executed tool calls, arguments, and outcomes to an append-only journal ([`tools/journal.mjs`](./tools/journal.mjs) at `.runs/journal.jsonl`) with SHA-256 hash chaining. All entries must undergo outbound secret scrubbing (`redactOutbound`) and control-character stripping (`\r`, `\n`) prior to disk write, with an inspectable query interface (`createJournalInspectionTool`) available for multi-step verification.
-- **Anti-Downgrade Model Routing**: Dynamic model routing (`routeModel`) may direct straightforward validation, static checks, and health probes to low-latency lightweight models, reserving reasoning models for architecture and multi-file code generation. However, tasks containing security-sensitive keywords (`security`, `vulnerab`, `exploit`, `secret`, `credential`, `encrypt`, `auth`, `compliance`, `gdpr`, `phi`, `pii`) must **never** downgrade to lightweight tiers and must always route to reasoning models. Parity is maintained with BioCore-AI's clinical routing invariants.
-- **Ambient Event Hardening**: Ambient signal listeners ([`tools/ambient-listener.mjs`](./tools/ambient-listener.mjs)) monitoring workspace file modifications or inbound task queues (`inbound-tasks.jsonl`) must enforce strict root containment (`assertInsideRoot`), debounced event coalescing, task ID deduplication against replay on file rotation, and default error containment to prevent unhandled event loop process termination.
+## 7. Guarded execution and memory
+- Every autonomous loop runs through [`tools/agent-loop.mjs`](./tools/agent-loop.mjs) under
+  [`tools/agent-guard.mjs`](./tools/agent-guard.mjs): empirical limits from
+  `tools/model-limits.json`, sandboxed paths, shell allowlisting, fail-closed policy, own-property
+  dispatch, and rejection of chaining, subshells and redirects. A tool call rewritten by a
+  `beforeTool` hook is re-checked before it runs.
+- Tests carry exception-safe cleanup, unique session ids and exact assertions, so a guard suite
+  proves behaviour instead of restating it.
+- Learned rules load from `memory/MEMORY.md` through
+  [`tools/memory/rule-budget.mjs`](./tools/memory/rule-budget.mjs) and are demoted into the advisory
+  manifest when the context budget is exceeded. `AGENTS.md` holds the hard rules, memory the soft.
+## 8. Recall and resumable approvals
+- Past notes and hand-offs arrive through
+  [`tools/memory/contextual-recall.mjs`](./tools/memory/contextual-recall.mjs), bounded by the same
+  budget, and never by pasting whole transcripts.
+- An approval that needs a human is suspended, not held: `tools/resumable-approval.mjs` writes a
+  tamper-evident record under `.approvals/`, the loop exits `suspended`, and resumption validates
+  the fingerprint and TTL before acting.
 
+## 9. Journal, routing and ambient signals
+- Guarded tool calls are appended to `.runs/journal.jsonl` with SHA-256 hash chaining and outbound
+  redaction; `tools/journal.mjs` exposes the read side.
+- Routing never downgrades security-sensitive work: `routeModel` keeps security, secrets, auth,
+  compliance, PHI and PII on the reasoning tier, and reviewer dispatches use the security tier named
+  in `.agents/model-routing.json`.
+- Ambient listeners (`tools/ambient-listener.mjs`) stay inside the workspace root, coalesce events,
+  deduplicate task ids and contain their own errors.
 
+## Where the detail lives
+- Cost, model routing and shell hygiene - [`.clinerules`](./.clinerules) and
+  [`.agents/model-routing.json`](./.agents/model-routing.json).
+- Procedural workflows - the nine skills in [`.agents/skills/`](./.agents/skills).
+- Tool behaviour and contracts - each module's docblock and its `.tool.json`.
+- Episode-level operating detail -
+  [`.agents/rules/challenge_playbook.md`](./.agents/rules/challenge_playbook.md).
+- Learned rules - [`memory/MEMORY.md`](./memory/MEMORY.md), loaded by `rule-budget.mjs`.
+- Findings on this machine - `KEEP.md`, gitignored and absent in a fresh clone.
+- A shorter mirror for other harnesses -
+  [`.agents/rules/workspace_rules.md`](./.agents/rules/workspace_rules.md).
