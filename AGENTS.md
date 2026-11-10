@@ -29,7 +29,8 @@ tool schema or a playbook, not here.
   - `policy_change` - `AGENTS.md`, `SKILL.md`, `.agents/rules/*`, `*.tool.json`: the synthetic
     matrix of section 5, plus static analysis.
   - `cross_cutting_security` - `tools/agent-guard.mjs`, `tools/agent-loop.mjs`,
-    `tools/journal.mjs`, root architecture: `node --run test`.
+    `tools/journal.mjs`, `tools/sanitize.mjs`, `tools/resumable-approval.mjs`, root architecture:
+    `node --run test`.
 - Peer review gates non-trivial work, but the loop itself is not restated here: `.clinerules` §5
   owns the reviewer tier, the evidence a dispatch must carry and the round cap. Report the verdict
   and what changed, never "reviewed" on its own.
@@ -38,8 +39,11 @@ tool schema or a playbook, not here.
 ## 3. Toolbox
 One canonical tool per job, and each tool carries its own contract. The table lists the tools that
 publish a schema: read that `.tool.json` before the call, because the schema, not memory, is the
-contract. A module named anywhere without a schema of its own is reached through
-`tools/agent-loop.mjs`, whose guard is the contract.
+contract. A module the loop invokes without a schema of its own is reached through
+`tools/agent-loop.mjs`, whose guard is the contract; scripts run directly with `node`
+(`eval-*.mjs`, `sanitize.mjs`, `resumable-approval.mjs`, `ambient-listener.mjs`) carry their own
+docblock as the contract. Schema filenames do not always mirror module filenames - the link in the
+table is the path to read.
 
 | Job | Tool | Contract | Skill |
 | :--- | :--- | :--- | :--- |
@@ -60,9 +64,10 @@ contract. A module named anywhere without a schema of its own is reached through
 - The coordinator never stalls on a long job. Delegate through the
   [`crew`](./.agents/skills/crew/SKILL.md) skill, `tools/scheduler/runner.mjs` or
   `tools/gateway/task-bridge.mjs`; a detached job reports its PID, log path and result path in the
-  turn that starts it, and its log is read before anything else happens.
-- Results land on disk (`.runs/<job>/result.json`), scrubbed of tokens, never in conversation
-  memory alone; workers signal completion instead of being polled in a loop.
+  turn that starts it, and its log is read before anything else happens. Those two modules carry
+  their docblock as their contract and are driven by the guarded loop, not called directly.
+- Results land on disk (`.runs/<job>/result.json`), scrubbed of tokens, PII and PHI, never in
+  conversation memory alone; workers signal completion instead of being polled in a loop.
 - Work that stays open waits behind a standing watcher, not a held terminal.
 
 ## 5. Synthetic evaluation gate
@@ -77,9 +82,13 @@ contract. A module named anywhere without a schema of its own is reached through
 - Least privilege: an agent handling untrusted input gets no irreversible write, dispatch or
   credentialed tool without an approval gate.
 - Inbound channels authenticate the sender in code before any tool, link fetch or model call, and
-  verify webhook signatures (HMAC-SHA256) with `crypto.timingSafeEqual`, inside a bounded clock
+  verify webhook signatures (HMAC-SHA256) by comparing fixed-length raw digests with
+  `crypto.timingSafeEqual`, rejecting a length mismatch before the compare, inside a bounded clock
   window and against a one-time nonce, dropping unverified, stale or replayed messages with zero
   side effects.
+- Outbound bundles use AES-256-GCM with a PBKDF2-SHA256 key at 600,000 iterations, a per-run nonce
+  and the tag checked before decryption; keys live in the runner's secret store and never in
+  `workflow_dispatch` inputs.
 - No plaintext PHI or PII in prompts, logs, the journal, `.runs/`, `.approvals/` or hand-offs;
   clinical data never enters this repository.
 - Errors and refusals never echo inputs, secrets or payloads.
@@ -116,7 +125,9 @@ contract. A module named anywhere without a schema of its own is reached through
 ## Where the detail lives
 - Cost, model routing and shell hygiene - [`.clinerules`](./.clinerules) and
   [`.agents/model-routing.json`](./.agents/model-routing.json).
-- Procedural workflows - the nine skills in [`.agents/skills/`](./.agents/skills).
+- Procedural workflows - the nine skills in [`.agents/skills/`](./.agents/skills): `client-handoff`,
+  `crew`, `keep`, `knowledge`, `multi-source-worker`, `rig`, `rook-loop`, `skill-shaper`,
+  `system-diff`.
 - Tool behaviour and contracts - each module's docblock and its `.tool.json`.
 - Episode-level operating detail -
   [`.agents/rules/challenge_playbook.md`](./.agents/rules/challenge_playbook.md).
