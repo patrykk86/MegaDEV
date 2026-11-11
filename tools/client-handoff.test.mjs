@@ -10,6 +10,11 @@ import path from 'node:path';
 import { after, before, describe, it } from 'node:test';
 import { STATUS, auditDeliverables } from './client-handoff.mjs';
 
+// A key-shaped fixture, assembled at runtime so no 39-character key sits in tracked source: the
+// auditor still reads the real string out of the temp file, so the google-api-key rule fires exactly
+// as before. Same convention as the fake OpenRouter key in tools/sanitize.test.mjs.
+const FAKE_GOOGLE_KEY = ['AIza', 'SyA', '1234567890', '1234567890', '123456789012'].join('');
+
 describe('client-handoff: valid delivery flow', () => {
   let tmpDir;
 
@@ -55,7 +60,7 @@ describe('client-handoff: policy violations', () => {
   before(() => {
     tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'client-handoff-viol-'));
     fs.writeFileSync(path.join(tmpDir, 'empty.txt'), '', 'utf-8');
-    fs.writeFileSync(path.join(tmpDir, 'leaky.env'), 'AIzaSyA12345678901234567890123456789012', 'utf-8');
+    fs.writeFileSync(path.join(tmpDir, 'leaky.env'), FAKE_GOOGLE_KEY, 'utf-8');
     fs.mkdirSync(path.join(tmpDir, 'somedir'));
   });
 
