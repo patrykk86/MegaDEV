@@ -113,6 +113,44 @@ export async function postHubReport(url, body, options = {}) {
   return { status: response.status, body: respBody };
 }
 
+export async function getHubJson(pathOrUrl, options = {}) {
+  loadWorkspaceEnv();
+  const suffix = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
+  const url = /^https?:/i.test(pathOrUrl) ? pathOrUrl : `https://hq.mega.dev${suffix}`;
+  const headers = {
+    Accept: 'application/json',
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)',
+  };
+  if (options.auth) {
+    const apiKey = options.apiKey || process.env.MEGADEV_KEY;
+    if (apiKey) {
+      headers['X-Megadev-Key'] = apiKey;
+    }
+  }
+
+  const response = await fetch(url, { method: 'GET', headers, cache: 'no-store' });
+  const rawText = await response.text();
+  let body = rawText;
+  try {
+    body = JSON.parse(rawText);
+  } catch {
+    // Keep a plain-text body as it arrived.
+  }
+
+  if (options.logFile) {
+    const entry = {
+      timestamp: new Date().toISOString(),
+      url,
+      method: 'GET',
+      status: response.status,
+      response: maskSecretValue(body),
+    };
+    fs.appendFileSync(options.logFile, `${JSON.stringify(entry, null, 2)}\n---\n`, 'utf-8');
+  }
+
+  return { status: response.status, headers: Object.fromEntries(response.headers.entries()), body };
+}
+
 function buildCliBody(values) {
   if (values.body) {
     return JSON.parse(values.body);

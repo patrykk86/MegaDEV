@@ -7,6 +7,7 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { verifyMap } from './codebase-map.mjs';
 import { checkSkillOverlap, validateSkill } from './check-skills.mjs';
 import { validateSupportKb } from './kb-check.mjs';
 import { aggregateHandoffs, validateHandoffObject } from './transcribe.mjs';
@@ -264,6 +265,13 @@ function checkKnowledgeBase(problems) {
   }
 }
 
+function checkCodebaseMap(problems) {
+  const res = verifyMap(ROOT);
+  if (!res.ok) {
+    problems.push(...res.problems);
+  }
+}
+
 function runNodeTool(label, scriptArgs, cwd, problems) {
   try {
     execFileSync(process.execPath, scriptArgs, { cwd, stdio: 'pipe' });
@@ -318,6 +326,7 @@ function main() {
   checkNoAbsolutePaths(problems);
   checkSkills(problems);
   checkKnowledgeBase(problems);
+  checkCodebaseMap(problems);
   checkMegaExamples(problems);
 
   if (problems.length > 0) {

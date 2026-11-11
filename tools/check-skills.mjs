@@ -1,3 +1,13 @@
+/**
+ * tools/check-skills.mjs - SKILL.md manifest validator for the skill set
+ *
+ * Checks each skill folder against the portability contract:
+ * - name matches the folder, is lowercase and not reserved.
+ * - description stays third person, inside `DESC_TARGET`, and names an owner for "Not for X".
+ * - body has no placeholders, no broken relative links and stays inside the line cap.
+ * - frontmatter keys stay inside the allowed set, and two descriptions may not overlap.
+ */
+
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -5,6 +15,13 @@ const RESERVED = new Set(['skill-creator', 'create-skill', 'skill', 'skills']);
 const NAME_RE = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 const SEMVER_RE = /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/;
 const ALLOWED_KEYS = new Set(['name', 'description', 'license', 'metadata', 'disable-model-invocation', 'allowed-tools']);
+// A description is the line a harness shows the model to pick a skill. DESC_MAX is the portability
+// limit from the format itself. DESC_TARGET is what this workspace aims for: short enough to keep the
+// prompt cheap, but wide enough that a skill written outside the repository (a course artifact, a
+// downloaded pack, installed byte for byte and never edited) is judged on its wording and not on a
+// number this repository chose.
+const DESC_MAX = 1024;
+const DESC_TARGET = 512;
 
 const DESC_RULES = [
   { lvl: 'error', re: /use this skill (whenever|any ?time|for any|for all)/i, msg: 'over-triggering phrase' },
@@ -99,10 +116,10 @@ function checkDescription(d, rel, problems) {
     problems.push(`${rel}: missing "description"`);
     return;
   }
-  if (d.length > 1024) {
-    problems.push(`${rel}: description ${d.length} chars > 1024`);
-  } else if (d.length > 300) {
-    problems.push(`${rel}: description ${d.length} chars > 300 target limit`);
+  if (d.length > DESC_MAX) {
+    problems.push(`${rel}: description ${d.length} chars > ${DESC_MAX}`);
+  } else if (d.length > DESC_TARGET) {
+    problems.push(`${rel}: description ${d.length} chars > ${DESC_TARGET} target limit`);
   }
   if (/[<>]/.test(d)) {
     problems.push(`${rel}: description contains XML`);
@@ -161,6 +178,8 @@ export function validateSkill(skillDir, problems) {
     problems.push(`${rel}: metadata.version "${fm.metadata.version}" not semver`);
   }
 }
+
+export { DESC_MAX, DESC_TARGET };
 
 export function checkSkillOverlap(skills, problems) {
   const STOP = new Set(['the', 'a', 'an', 'and', 'or', 'for', 'to', 'of', 'in', 'on', 'with', 'when', 'use', 'this', 'that', 'is', 'are', 'it', 'as', 'by', 'from', 'not']);

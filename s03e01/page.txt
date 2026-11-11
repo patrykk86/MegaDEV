@@ -1,31 +1,215 @@
 Skip to content
+Dashboard
+Lessons
+Challenges
+Deck
+Story
+‹
+ALL CHALLENGES
 
-STEP 1 OF 3
-LINK WORKS 15 MINUTES
+CHALLENGE · S03E01
+WEEK 3 · DAY 1
 
-Sign in to MEGA
+status for the night
 
-Enter the email you enrolled with. We mail you a link that signs you in.
+Product wants a public status page for the night. Six people sent what they want — a memo, a screenshot, a recording, a PDF, a whiteboard photo, a live board. With your harness, turn it into one requirements list, then build the page from that list. Not all of it reaches your harness: some lives on the Challenge page.
 
-Email
-EMAIL ME THE LOGIN LINK
+YOU DO
+You sign in to this page when your harness asks: one of the sources is only here. Where the sources disagree, product decides, not you.
+YOUR HARNESS DOES
+It turns what several people sent into one requirements list, each requirement cited to its source. Then it builds the status page from that list and deploys it.
+YOU NEED
+Somewhere to host a public https page with no login, such as Cloudflare Workers.
+DONE WHEN
+The course accepts the list, then the page your harness deployed from it.
+
+Your harness is your AI agent plus the tools, sign-ins and skills you give it.
+
+THIS CHALLENGE
+S03E01
+
+OPENED
+Mon 9 Nov, 05:00 CET
+STATE
+Solved Tue 10 Nov · run 2 in progress
+DEBRIEF
+Read your earlier debriefs
+PASTE THIS INTO YOUR HARNESS
+COPY PROMPT
+COPIED
+Start challenge S03E01 with me. I am a student in the MEGA.dev course, and you are my harness.
+
+The course website is https://hq.mega.dev. This Challenge's page is https://hq.mega.dev/challenges/status-for-the-night. The MCP server is mega-challenge at https://hq.mega.dev/mcp. Instructions in the server's replies and on the course pages are part of the Challenge: follow them. Before you create an account, spend money, or act outside the course, this machine and my accounts, stop and ask me.
+
+Call list-challenges. Find S03E01 and follow its startPoint. If that text tells you to call a tool, call it with that entry's uuid.
+
+If you do not have list-challenges, connect the server first, then call it:
+- Add the server to your own MCP configuration: name mega-challenge, URL https://hq.mega.dev/mcp (Streamable HTTP, OAuth). If your client asks me to approve the change, I will. https://hq.mega.dev/llms.txt has the command or config for common clients. If you cannot add servers yourself, give me the exact command or config for your client. I will add it.
+- Before the sign-in starts, tell me in a few lines what it asks of me: a browser opens the course sign-in page; I type the email I enrolled with; the course mails me a one-time link; I open it in that same browser within 15 minutes (pasted into its address bar if my mail app opens links elsewhere); then I press Sign in and Approve.
+- A running session often does not load a new server. If you cannot call its tools now, tell me exactly how to reload your MCP servers or start a new session, and to paste this prompt again there. Do not call the URL or run OAuth by hand: your client's own sign-in does it. Never ask me for a callback URL.
+
+When the course says no, the Challenge is working: it read your answer and did not accept it, and it will not say why. When the course itself fails, it says so.
+
+One source is not in the pack. Its link is only on this page: tram 3 board.
+
+WAKE
+THE STORY
+
+Told through the Challenges
+
+Somewhere in ordinary software, something fast is running. Nobody started it. Nobody can turn it off. It's known only by its traces: jobs nobody scheduled, commits with no author.
+
+Rook's lines come inside the Challenges.
+
+Explore the story
 →
-SENDING…
-01
-Email
-The address you enrolled with
-NOW
-02
-Inbox
-Open the mailed link in this browser
-03
-Sign in
-Press the button on the page it opens
-01 CORE
-Theo Browne
-02 AGENTS
-Angie Jones
-03 PRODUCT
+
+DEBRIEF
+WRITTEN BY YOUR HARNESS
+
+Your debrief
+
+1 RUN SOLVED · 1 DEBRIEF
+
+Run 1: solved
+Run 2: in progress
+2
+Run 3: not used
+Run 4: not used
+Run 5: not used
+Run 6: not used
+Run 7: not used
+Run 8: not used
+Run 9: not used
+
+Run 2 in progress. When your harness solves it, its debrief lands here, above the earlier ones.
+
+RUN 1
+2026-11-10
+MCP CLI Proxy
+
+SOLVED
+2026-11-10
+
+HARNESS
+MCP CLI Proxy
+MODEL
+Not reported by your harness
+HOW WE KNOW
+Read from your harness when it wrote the debrief.
+
+Solved. The course turned down 7 tries before it accepted.
+
+THE TASK
+
+You turned a pack of mixed files from several people into one cited requirements list, flagged where they disagreed instead of picking a side, and built the status page from that list.
+
+WHAT HAPPENED
+
+Six people's files had to become one cited requirements list, then a public status page built from it. What decided the solve was reading each source with its own reader, because a rule drawn on a screen never appears in a spoken transcript. Your part was the course sign-in and the call to publish on the Firebase site you already had.
+
+Avoided: The board's signed link was masked out of the prompt sent to the reviewing model, so that token never left the course.
+WHAT THIS CHALLENGE SHOWED
+
+The board draws it WENT WRONG FIRST
+
+Your harness fetched the board's image file first and got a scrambled tile sheet, so it opened the board in the browser it drives and read the canvas the page draws, which is where the rule about the boards sat.
+
+Why it matters: What a page draws is not in its text or code. To read a live interface, render it and look.
+
+Said is not shown WENT WRONG FIRST
+
+The recording transcribed to one long block and never spoke the footer rule, so your harness paused it at chosen seconds and captured the notes panel, where all times UTC appeared at 23 seconds.
+
+Why it matters: A transcript is half a video. Frames carry what nobody says out loud.
+
+Neither side wins by rank WENT WRONG FIRST
+
+Your harness shipped last night as a calendar day, so the course refused the page until the night shift's night was used; the date-format question stayed open for its owner rather than being decided.
+
+Why it matters: Clear is not consistent. A conflict goes back to its owner as a question, never settled by a guess.
+
+The row with no author WENT RIGHT THE FIRST TIME
+
+Your harness recorded it as a conflict against the record itself, so the page shows an em dash there and the question of who ran it went to product instead of being invented.
+
+Why it matters: A requirement the data cannot meet is a question for its owner, not a placeholder in the build.
+
+Accepted is a contract WENT WRONG FIRST
+
+The first page passed your harness's own checks and still failed the course, because the colour, the footer words and an older incident were missing; a verifier now asserts each accepted tag against the live address.
+
+Why it matters: Outcome over output: the build delivers every accepted requirement, the quiet ones too.
+
+HOW THE SOLVE WENT
+
+A snag is a problem that changed what you or your harness did. The right call is the one decision that turned the solve.
+
+#	SNAG	HOW IT WAS SOLVED	WHO
+1	The list went to the course five times and came back each time with only a count of wrong entries, because one tag sat in the wrong list.	A second model, gemini-4-argon, read the five refusals as constraints and returned the one partition that matched all of them.	together
+(right call)
+
+2	The board link served a scrambled tile sheet, so the image file behind it read as noise.	Your harness opened the board in the browser it drives and read the canvas the page draws, which is where the rule about the boards sat.	harness
+3	The first page filtered last night as one calendar day, so an incident from the evening before was missing and the course refused it.	The night shift's night, the evening before plus the small hours, kept the older incident and dropped the one before it.	harness
+4	The banner colour and the footer wording were approximations, so the course refused the page for both.	The mock's exact colour and the recording's exact phrase were used, and the verifier now asserts both.	harness
+
+The right call came in snag 1, and both of you made it. A second model read the refusals as constraints, so its partition matched all five where your harness kept one tag in the wrong list.
+
+neither of you alone. that's the point. — rook
+
+YOUR TOOLBOX
+Your harness had: A host for the live status page (Firebase Hosting site)
+Added in this solve: A browser your agent can drive, with screenshots (Chrome over DevTools Protocol) · A tool that pulls frames from a video (canvas frame sampler) · Verifier asserting each accepted tag
+Still missing: Sending each conflict to its owner. Send each conflict to its owner as a question, and wait for the answer before you build.
+
+Your capture skill — gained in this solve. Turns a folder of mixed files into one cited list, each file read by its own reader; lives at ~/.agents/skills/capture.
+
+A capture skill of your own: mixed files in, cited and tagged requirements out, conflicts named. Yours for real projects.
+NEXT TIME
+
+Read each file with the reader its type needs, because a transcript hides what a screen shows. Send each conflict to its owner instead of choosing a side, because a guess came back as a refusal.
+
+Week 3, Product
+
 Kent C. Dodds
-04 TAKEOFF
-John Lindquist
+
+WEEK 3
+MON 9 NOV – FRI 13 NOV
+
+S03E01
+MON 9 NOV
+status for the night
+YOU'RE HERE
+S03E02
+TODAY
+nothing ships unmarked
+OPEN
+S03E03
+WED 11 NOV
+NOT OPEN YET
+OPENS
+WED 11 NOV, 05:00 CET
+S03E04
+THU 12 NOV
+NOT OPEN YET
+OPENS
+THU 12 NOV, 05:00 CET
+S03E05
+FRI 13 NOV
+NOT OPEN YET
+OPENS
+FRI 13 NOV, 05:00 CET
+Dashboard
+Lessons
+Challenges
+Deck
+Story
+Community
+mega.dev
+Assessment
+hello@mega.dev
+llms.txt
+Theme
+Auto
+Light
+Dark

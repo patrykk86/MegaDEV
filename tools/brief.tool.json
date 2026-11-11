@@ -1,0 +1,54 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "brief",
+  "description": "Writes and validates the standing brief a session works from: intent, definition of done, one proof per criterion, the behaviour that already exists, and the boundaries. Refuses an incomplete brief, a credential and an absolute path. Compatible with skill: 'brief' (.agents/skills/brief/SKILL.md).",
+  "metadata": {
+    "skill": "brief",
+    "script": "tools/brief.mjs",
+    "runtime": "node"
+  },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "job": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+        "description": "Job id; the brief is written to .runs/<job>/brief.json and brief.md."
+      },
+      "title": {
+        "type": "string",
+        "description": "Optional human-readable title for the job."
+      },
+      "intent": {
+        "type": "string",
+        "minLength": 8,
+        "description": "What the human can do once this work is finished."
+      },
+      "done": {
+        "type": "array",
+        "items": { "type": "string", "minLength": 8 },
+        "minItems": 1,
+        "description": "Acceptance criteria, one checkable statement per entry."
+      },
+      "proof": {
+        "type": "array",
+        "items": { "type": "string", "minLength": 8 },
+        "minItems": 1,
+        "description": "One proof per criterion: the command, log line or file that closes it."
+      },
+      "existing": {
+        "type": "string",
+        "minLength": 8,
+        "description": "The behaviour that already exists and must not change."
+      },
+      "boundaries": {
+        "type": "array",
+        "items": { "type": "string", "minLength": 8 },
+        "minItems": 1,
+        "description": "What this must not do, and what it must not touch."
+      }
+    },
+    "required": ["job", "intent", "done", "proof", "existing", "boundaries"],
+    "additionalProperties": false
+  }
+}

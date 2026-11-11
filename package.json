@@ -9,11 +9,13 @@
   },
   "scripts": {
     "check": "node tools/check.mjs",
+    "map": "node tools/codebase-map.mjs",
+    "map:check": "node tools/codebase-map.mjs --check",
     "services:check": "node tools/service/health-check.mjs",
     "services:start": "wscript tools/service/start-background-services.vbs",
     "services:stop": "cmd /c tools\\service\\stop-background-services.cmd",
     "mex": "npm --prefix mega-examples start --",
-    "test": "node tools/check.mjs && node --test tools/transcribe.test.mjs tools/check-skills.test.mjs tools/system-diff-build.test.mjs tools/sanitize.test.mjs tools/eval-skill.test.mjs tools/nightly-audit.test.mjs tools/model-limits.test.mjs tools/agent-loop.test.mjs tools/resumable-approval.test.mjs tools/memory/contextual-recall.test.mjs tools/journal.test.mjs tools/ambient-listener.test.mjs tools/scheduler/runner.test.mjs tools/gateway/dispatcher.test.mjs tools/gateway/task-bridge.test.mjs && node tools/eval-agent-primitives.mjs && node tools/eval-agents-capabilities.mjs && node --test .agents/skills/knowledge/scripts/check.test.ts .agents/skills/system-diff/scripts/check.test.mjs",
+    "test": "node tools/check.mjs && node --test tools/brief.test.mjs tools/codebase-map.test.mjs tools/transcribe.test.mjs tools/check-skills.test.mjs tools/system-diff-build.test.mjs tools/sanitize.test.mjs tools/eval-skill.test.mjs tools/nightly-audit.test.mjs tools/model-limits.test.mjs tools/agent-loop.test.mjs tools/resumable-approval.test.mjs tools/memory/contextual-recall.test.mjs tools/journal.test.mjs tools/ambient-listener.test.mjs tools/scheduler/runner.test.mjs tools/gateway/dispatcher.test.mjs tools/gateway/task-bridge.test.mjs && node tools/eval-agent-primitives.mjs && node tools/eval-agents-capabilities.mjs && node --test .agents/skills/knowledge/scripts/check.test.ts .agents/skills/system-diff/scripts/check.test.mjs",
     "transcribe": "node tools/transcribe.mjs"
   },
   "dependencies": {

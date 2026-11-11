@@ -1,0 +1,18 @@
+{
+  "tracked": 35,
+  "requests": 21,
+  "open": 22,
+  "openAgentReady": 19,
+  "openNeedsHuman": 3,
+  "done": 6,
+  "closed": 7,
+  "blocked": [
+    "IN-4841 ← SCHED-4463"
+  ],
+  "needsHuman": [
+    "SCHED-4486",
+    "IN-2210",
+    "IN-5315"
+  ],
+  "problems": []
+}

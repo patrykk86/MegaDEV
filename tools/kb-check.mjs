@@ -1,6 +1,12 @@
 #!/usr/bin/env node
-// tools/kb-check.mjs
-// Validates knowledge base structure and contracts for support-kb
+/**
+ * tools/kb-check.mjs - Support knowledge base structure and contract validator
+ *
+ * Guards support-kb notes before their content reaches a session:
+ * - frontmatter carries title, owner, status and a YYYY-MM-DD reviewed date, and the status is known.
+ * - a note opens with its BLUF paragraph, never with a subheading, and no two notes share a title.
+ * - internal /kb links resolve, and a note unreachable from /kb is reported as a warning.
+ */
 
 import fs from 'node:fs';
 import path from 'node:path';

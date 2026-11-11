@@ -56,6 +56,9 @@ table is the path to read.
 | Recall of past sessions | [`tools/memory/contextual-recall.mjs`](./tools/memory/contextual-recall.mjs) | [`contextual-recall.tool.json`](./tools/contextual-recall.tool.json) | [`rook-loop`](./.agents/skills/rook-loop/SKILL.md) |
 | System diff of a PR | [`tools/system-diff-build.mjs`](./tools/system-diff-build.mjs) | [`system-diff.tool.json`](./tools/system-diff.tool.json) | [`system-diff`](./.agents/skills/system-diff/SKILL.md) |
 | Client deliverable | [`tools/client-handoff.mjs`](./tools/client-handoff.mjs) | [`client-handoff.tool.json`](./tools/client-handoff.tool.json) | [`client-handoff`](./.agents/skills/client-handoff/SKILL.md) |
+| Standing brief | [`tools/brief.mjs`](./tools/brief.mjs) | [`brief.tool.json`](./tools/brief.tool.json) | [`brief`](./.agents/skills/brief/SKILL.md) |
+| Codebase map | [`tools/codebase-map.mjs`](./tools/codebase-map.mjs) | [`codebase-map.tool.json`](./tools/codebase-map.tool.json) | - |
+| Product view | [`tools/product-view.mjs`](./tools/product-view.mjs) | [`product-view.tool.json`](./tools/product-view.tool.json) | - |
 
 - Course traffic goes through `hub-client.mjs`, the single client, which masks secrets; the
   evidence-log format itself is owned by `challenge_playbook.md`.
@@ -131,6 +134,8 @@ table is the path to read.
 - Tool behaviour and contracts - each module's docblock and its `.tool.json`.
 - Episode-level operating detail -
   [`.agents/rules/challenge_playbook.md`](./.agents/rules/challenge_playbook.md).
+- The map of the primitives - [`memory/CODEBASE-MAP.md`](./memory/CODEBASE-MAP.md), generated from the
+  docblocks and imports by `node tools/codebase-map.mjs`, and checked for staleness by `check.mjs`.
 - Learned rules - [`memory/MEMORY.md`](./memory/MEMORY.md), loaded by `rule-budget.mjs`.
 - Findings on this machine - `KEEP.md`, gitignored and absent in a fresh clone.
 - A shorter mirror for other harnesses -
