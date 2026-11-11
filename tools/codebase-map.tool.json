@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "codebase_map",
+  "description": "Generates memory/CODEBASE-MAP.md from the source: each tools module's purpose and local imports, the reverse 'called by' index, every skill and the tool it drives, and each episode folder. A content fingerprint makes --check fail as soon as the map is stale.",
+  "metadata": {
+    "skill": null,
+    "standaloneReason": "Mechanical generator with one deterministic output and a fingerprint gate; it needs no procedural judgement, so a skill would only restate the command.",
+    "script": "tools/codebase-map.mjs",
+    "runtime": "node"
+  },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "check": {
+        "type": "boolean",
+        "default": false,
+        "description": "Verify the map on disk against a fresh scan; exit 1 when it is missing or stale."
+      },
+      "stdout": {
+        "type": "boolean",
+        "default": false,
+        "description": "Print the generated map instead of writing memory/CODEBASE-MAP.md."
+      }
+    },
+    "additionalProperties": false
+  }
+}

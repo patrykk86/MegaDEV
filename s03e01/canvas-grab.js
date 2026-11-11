@@ -7,5 +7,5 @@
   }
   await new Promise((resolve) => setTimeout(resolve, 2000));
   const data = canvas.toDataURL('image/png');
-  return JSON.stringify({ title: document.title, width: canvas.width, height: canvas.height, bytes: Math.round((data.length - 22) * 0.75), b64: data.split(',')[1] });
+  return JSON.stringify({ type: 'image/png', title: document.title, width: canvas.width, height: canvas.height, bytes: Math.round((data.length - 22) * 0.75), b64: data.split(',')[1] });
 })();

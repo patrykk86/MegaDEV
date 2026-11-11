@@ -1,0 +1,10 @@
+# s03e01 run 2 — the night status page as a Cloudflare Worker.
+# Public https with no login: the Worker answers on https://<name>.<account-subdomain>.workers.dev
+# and needs no bindings, because the only data it reads is the public ops feed.
+
+name = "night-status"
+main = "index.mjs"
+compatibility_date = "2026-11-10"
+
+# No route, no custom domain, no secret: a workers.dev address is enough for the course's public page.
+workers_dev = true
