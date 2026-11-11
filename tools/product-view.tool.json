@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "product_view",
+  "description": "Renders memory/PRODUCT-VIEW.html from the source: the flows between primitives (an entry point nobody imports, the modules it reaches through local imports, and the paths their source names), the paths named across tools/, the gates that prove each module, and the skills with the tool they drive. One self-contained page with inline CSS, no script and no network, carrying a content fingerprint that --check compares to a fresh scan.",
+  "metadata": {
+    "skill": null,
+    "standaloneReason": "Mechanical generator with one deterministic output and a fingerprint gate; a skill would restate the command without adding judgement.",
+    "script": "tools/product-view.mjs",
+    "runtime": "node"
+  },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "check": {
+        "type": "boolean",
+        "default": false,
+        "description": "Compare the page on disk with a fresh scan of the source; exit 1 when it is missing or stale."
+      },
+      "stdout": {
+        "type": "boolean",
+        "default": false,
+        "description": "Print the page instead of writing it."
+      },
+      "out": {
+        "type": "string",
+        "description": "Write the page here, resolved against the workspace root, instead of memory/PRODUCT-VIEW.html. Use .runs/<job>/view.html to leave a change the artifact a person opens."
+      }
+    },
+    "additionalProperties": false
+  }
+}
