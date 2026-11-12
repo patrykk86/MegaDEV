@@ -11,9 +11,12 @@ import path from 'node:path';
 import {
   HARD_TOKEN_LIMIT,
   HARD_BYTE_LIMIT,
+  SUBJECT_BYTE_CAP,
   estimateTokens,
   measureContent,
   buildAdvisoryManifest,
+  listMemorySubjectFiles,
+  inspectMemoryLayout,
   loadProjectMemoryRules,
   enforceRuleBudget,
 } from './rule-budget.mjs';
@@ -47,8 +50,8 @@ test('enforceRuleBudget: passes when AGENTS.md and rules are within budget', () 
   assert.ok(result.bytes <= HARD_BYTE_LIMIT);
 });
 
-test('enforceRuleBudget: throws RuleBudgetExceededError when byte limit (>24KB) is exceeded by hard rules', () => {
-  const oversizedContent = 'x'.repeat(25 * 1024);
+test('enforceRuleBudget: throws RuleBudgetExceededError when the byte limit is exceeded by hard rules', () => {
+  const oversizedContent = 'x'.repeat(HARD_BYTE_LIMIT + 1);
 
   assert.throws(
     () =>
@@ -66,8 +69,8 @@ test('enforceRuleBudget: throws RuleBudgetExceededError when byte limit (>24KB) 
   );
 });
 
-test('enforceRuleBudget: throws RuleBudgetExceededError when token limit (>20,000 tokens) is exceeded', () => {
-  const manyTokensContent = Array.from({ length: 16_000 }, () => 'a').join(' ');
+test('enforceRuleBudget: throws RuleBudgetExceededError when the token limit is exceeded', () => {
+  const manyTokensContent = Array.from({ length: Math.ceil(HARD_TOKEN_LIMIT * 1.5) }, () => 'a').join(' ');
 
   assert.throws(
     () =>
@@ -196,7 +199,67 @@ test('buildAdvisoryManifest: sanitizes HTML comments, dashes, and newlines to pr
   assert.ok(manifest.includes('Summary with __&gt; breakout attempt and newlines'));
 });
 
-test('loadProjectMemoryRules & enforceRuleBudget: auto-loads memory/MEMORY.md as soft rule', () => {
+test('listMemorySubjectFiles: keeps link order, drops repeats, escapes, external and reserved files', () => {
+  const index = [
+    '# Index',
+    '- [a](a-knowledge.md)',
+    '- [again](a-knowledge.md)',
+    '- [b](./b-knowledge.md)',
+    '- [generated](CODEBASE-MAP.md)',
+    '- [self](MEMORY.md)',
+    '- [out](../elsewhere.md)',
+    '- [site](https://example.com/x.md)',
+    '- [nested](sub/deep.md)',
+  ].join('\n');
+
+  assert.deepEqual(listMemorySubjectFiles(index), ['a-knowledge.md', 'b-knowledge.md']);
+  assert.deepEqual(listMemorySubjectFiles(index, 'a-knowledge.md'), ['b-knowledge.md']);
+  assert.throws(() => listMemorySubjectFiles(null), TypeError);
+});
+
+test('loadProjectMemoryRules: the index is one hard rule and every linked subject its own soft rule', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lamarck-tree-test-'));
+  try {
+    const memDir = path.join(tmpDir, 'memory');
+    fs.mkdirSync(memDir, { recursive: true });
+    fs.writeFileSync(
+      path.join(memDir, 'MEMORY.md'),
+      '# Index\n\n- [code](code-knowledge.md)\n- [verify](verification-knowledge.md)\n- [map](CODEBASE-MAP.md)\n',
+      'utf-8'
+    );
+    fs.writeFileSync(path.join(memDir, 'code-knowledge.md'), '# Code knowledge\n\n- rule one\n', 'utf-8');
+    fs.writeFileSync(
+      path.join(memDir, 'verification-knowledge.md'),
+      '# Verification knowledge\n\n- rule two\n',
+      'utf-8'
+    );
+    fs.writeFileSync(path.join(memDir, 'CODEBASE-MAP.md'), '# generated\n', 'utf-8');
+
+    const loaded = loadProjectMemoryRules(tmpDir);
+    assert.deepEqual(
+      loaded.map((r) => r.id),
+      ['project-memory-index', 'memory:code-knowledge', 'memory:verification-knowledge']
+    );
+    assert.equal(loaded[0].hard, true);
+    assert.equal(loaded[0].path, 'memory/MEMORY.md');
+    assert.equal(loaded[1].hard, false);
+    assert.equal(loaded[1].path, 'memory/code-knowledge.md');
+    assert.equal(loaded[1].summary, 'Code knowledge');
+    assert.ok(loaded[1].content.includes('rule one'));
+    assert.ok(!loaded.some((r) => r.id.includes('CODEBASE-MAP')));
+
+    const layout = inspectMemoryLayout(tmpDir);
+    assert.equal(layout.ok, true);
+    assert.deepEqual(
+      layout.subjects.map((s) => s.path),
+      ['memory/code-knowledge.md', 'memory/verification-knowledge.md']
+    );
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('loadProjectMemoryRules: a single unlinked MEMORY.md still loads as one soft rule', () => {
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lamarck-mem-test-'));
   try {
     const memDir = path.join(tmpDir, 'memory');
@@ -220,6 +283,53 @@ test('loadProjectMemoryRules & enforceRuleBudget: auto-loads memory/MEMORY.md as
 
     assert.ok(result.activeRules.includes('project-memory-lamarck'));
     assert.ok(result.compiledContent.includes('Always test with node --test'));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('inspectMemoryLayout: reports a dangling link, an unlinked subject and an oversized subject', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lamarck-layout-test-'));
+  try {
+    const memDir = path.join(tmpDir, 'memory');
+    fs.mkdirSync(memDir, { recursive: true });
+    fs.writeFileSync(path.join(memDir, 'MEMORY.md'), '# Index\n\n- [gone](gone.md)\n', 'utf-8');
+    fs.writeFileSync(path.join(memDir, 'orphan.md'), '# Orphan\n\n- nobody links me\n', 'utf-8');
+    fs.writeFileSync(
+      path.join(memDir, 'MEMORY.md'),
+      '# Index\n\n- [gone](gone.md)\n- [huge](huge.md)\n',
+      'utf-8'
+    );
+    fs.writeFileSync(path.join(memDir, 'huge.md'), `# Huge\n\n${'x'.repeat(SUBJECT_BYTE_CAP)}\n`, 'utf-8');
+
+    const layout = inspectMemoryLayout(tmpDir);
+    assert.equal(layout.ok, false);
+    assert.ok(layout.problems.some((p) => p.includes('gone.md') && p.includes('missing')));
+    assert.ok(layout.problems.some((p) => p.includes('orphan.md: not linked')));
+    assert.ok(layout.problems.some((p) => p.includes('exceeds the')));
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('enforceRuleBudget: auto-loads the memory tree once, even when memory rules are passed in', () => {
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'lamarck-once-test-'));
+  try {
+    const memDir = path.join(tmpDir, 'memory');
+    fs.mkdirSync(memDir, { recursive: true });
+    fs.writeFileSync(path.join(memDir, 'MEMORY.md'), '# Index\n\n- [code](code-knowledge.md)\n', 'utf-8');
+    fs.writeFileSync(path.join(memDir, 'code-knowledge.md'), '# Code knowledge\n\n- rule one\n', 'utf-8');
+
+    const auto = enforceRuleBudget({ agentsMdContent: '# AGENTS.md', workspaceRoot: tmpDir });
+    assert.deepEqual(auto.activeRules, ['project-memory-index', 'memory:code-knowledge']);
+
+    const explicit = enforceRuleBudget({
+      agentsMdContent: '# AGENTS.md',
+      rules: loadProjectMemoryRules(tmpDir),
+      workspaceRoot: tmpDir,
+    });
+    assert.deepEqual(explicit.activeRules, ['project-memory-index', 'memory:code-knowledge']);
+    assert.equal(explicit.compiledContent.split('rule one').length - 1, 1);
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }

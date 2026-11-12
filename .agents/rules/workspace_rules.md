@@ -8,3 +8,4 @@ See [`AGENTS.md`](../../AGENTS.md) for the canonical workspace operating rules:
 5. **Component Grounding**: Base all reported metrics and frontmatter on exported component views, keeping prose free of hardcoded numbers.
 6. **Contract-First & Evidence Logging**: Read declared endpoint schemas before sending payloads, and log all requests with masked secrets to `s01eXX/requests.log`.
 7. **Augmented Tooling & Skill Linking**: Break silos by advertising matching skills in tool schemas and declaring augmented tools in skill manifests with progressive discovery.
+8. **Memory Tree**: `memory/MEMORY.md` is an index that routes; the subject files beside it hold the rules. File a learning in the subject that owns it, keep `AGENTS.md` general, and let `tools/check.mjs` prove the tree loads.

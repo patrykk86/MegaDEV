@@ -10,6 +10,7 @@ import { fileURLToPath } from 'node:url';
 import { verifyMap } from './codebase-map.mjs';
 import { checkSkillOverlap, validateSkill } from './check-skills.mjs';
 import { validateSupportKb } from './kb-check.mjs';
+import { inspectMemoryLayout } from './memory/rule-budget.mjs';
 import { aggregateHandoffs, validateHandoffObject } from './transcribe.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -32,7 +33,7 @@ const SECRET_PATTERNS = [
   },
 ];
 
-const IGNORED_DIRS = new Set(['.git', 'node_modules', '__pycache__', 'mega-examples']);
+const IGNORED_DIRS = new Set(['.git', 'node_modules', '__pycache__', 'mega-examples', '.gemini', '.copilot']);
 
 function walkFiles(dir, result = []) {
   if (!fs.existsSync(dir)) {
@@ -207,7 +208,9 @@ function checkNoAbsolutePaths(problems) {
   }
 
   for (const rel of trackedFiles) {
-    if (rel === 'tools/check.mjs' || /\.(mp3|mp4|wav|pyc|woff2|exe|zip|tar\.gz)$/i.test(rel)) {
+    // tools/check.mjs names the pattern it looks for; a *.test.mjs file names a fixture it asserts
+    // against. Both are exempt from the absolute-path rule, and neither is exempt from the secret scan.
+    if (rel === 'tools/check.mjs' || /\.test\.mjs$/.test(rel) || /\.(mp3|mp4|wav|pyc|woff2|exe|zip|tar\.gz)$/i.test(rel)) {
       continue;
     }
     const fullPath = path.join(ROOT, rel);
@@ -316,6 +319,34 @@ function checkMegaExamples(problems) {
   }
 }
 
+const AGENTS_BYTE_CAP = 6_000;
+const CLINERULES_BYTE_CAP = 9_000;
+
+/** Instruction files hold general rules; the detail has a home elsewhere. */
+function checkDocBudgets(problems) {
+  for (const [rel, cap] of [
+    ['AGENTS.md', AGENTS_BYTE_CAP],
+    ['.clinerules', CLINERULES_BYTE_CAP],
+  ]) {
+    const full = path.join(ROOT, rel);
+    if (!fs.existsSync(full)) {
+      continue;
+    }
+    const bytes = Buffer.byteLength(fs.readFileSync(full, 'utf-8'), 'utf8');
+    if (bytes > cap) {
+      problems.push(`${rel}: ${bytes}B exceeds its ${cap}B cap. Move the detail to memory/ or a skill.`);
+    }
+  }
+}
+
+/** The memory tree must be loadable: one index, every subject linked, caps respected. */
+function checkMemoryTree(problems) {
+  const res = inspectMemoryLayout(ROOT);
+  if (!res.ok) {
+    problems.push(...res.problems);
+  }
+}
+
 function main() {
   const problems = [];
   checkCanonicalTools(problems);
@@ -327,6 +358,8 @@ function main() {
   checkSkills(problems);
   checkKnowledgeBase(problems);
   checkCodebaseMap(problems);
+  checkDocBudgets(problems);
+  checkMemoryTree(problems);
   checkMegaExamples(problems);
 
   if (problems.length > 0) {
@@ -339,7 +372,7 @@ function main() {
   }
 
   console.log(
-    '✓ Workspace static analysis passed (canonical tools, secret hygiene, relative path invariant, multi-source handoffs, gitignore, skills guard, support-kb contracts, mex check, tsc, biome).'
+    '✓ Workspace static analysis passed (canonical tools, secret hygiene, relative path invariant, multi-source handoffs, gitignore, skills guard, support-kb contracts, codebase map, doc budgets, memory tree, mex check, tsc, biome).'
   );
 }
 

@@ -13,7 +13,10 @@ projects stay dependency- and environment-isolated.
 
 - **`AGENTS.md`** (root) is the canonical operating index. Obey it first; this file only
   adds Cline-side routing, cost and hygiene rules.
-- **`memory/MEMORY.md`** holds learned soft rules. Append verified operational learnings.
+- **`memory/MEMORY.md`** is an index, not the memory itself: it routes a question to a subject
+  file beside it (`code-`, `architecture-`, `security-`, `verification-`, `skills-`, `api-`,
+  `product-`, `course-`, `session-knowledge.md`) and loads as a hard rule, while each subject
+  loads as its own soft rule. File a new learning in the subject that owns it, never here.
 - **`.agents/skills/`** is MegaDEV's own skill set (`client-handoff`, `crew`, `keep`,
   `knowledge`, `multi-source-worker`, `rig`, `rook-loop`, `skill-shaper`, `system-diff`).
   Keep it as-is: do not mirror global/external skill registries over it.
@@ -62,7 +65,9 @@ routed tier). `gemini-4-argon` and `claude-sonnet-5.5` are **diff-scoped only** 
 never read files, plan, or chat.
 
 **Token budgets** (mirrored in the JSON `budgets` block): `.clinerules` at most 9,000
-chars, `AGENTS.md` at most 12,000 chars, per-turn prompt target 30,000 tokens.
+chars, `AGENTS.md` at most 6,000 chars, memory at most 24,000 tokens / 36,864 bytes
+shared with `AGENTS.md` (index 3,072 B, one subject 4,096 B), per-turn prompt target
+30,000 tokens.
 
 Ids in the table are catalog aliases; `.agents/model-routing.json` records the canonical
 slugs that are actually routable and that appear in `tools/model-limits.json`.

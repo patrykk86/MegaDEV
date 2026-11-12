@@ -1,145 +1,92 @@
 # AGENTS.md
 
-MegaDEV is a pure Node.js 25 workspace: an agent harness in `tools/`, course episodes in `s0Xe0Y/`,
-a knowledge base in `support-kb/`, examples in `mega-examples/`, skills in `.agents/skills/`. This
-file is the entry point - the hard rules, one line each, with the detail behind a pointer. Cost,
-routing and shell hygiene live in [`.clinerules`](./.clinerules); learned rules live in
-[`memory/MEMORY.md`](./memory/MEMORY.md); episode detail lives in
-[`.agents/rules/challenge_playbook.md`](./.agents/rules/challenge_playbook.md).
+MegaDEV is a pure Node.js 25 workspace: the agent harness in `tools/`, course episodes in `s0Xe0Y/`, a
+knowledge base in `support-kb/`, examples in `mega-examples/`, skills in `.agents/skills/`. This file holds
+only hard rules, one line each. Cost, routing and shell hygiene live in `.clinerules`; learned rules live in
+[`memory/MEMORY.md`](./memory/MEMORY.md) — an **index**: read the subject it points to, and file a new rule
+in the subject that owns it. Episode detail lives in `.agents/rules/challenge_playbook.md`.
 
-This file stays at or under 12,000 characters. A rule that needs a paragraph belongs in a skill, a
-tool schema or a playbook, not here.
-
-## 1. Boundaries and entry points
-- MegaDEV and BioCore-AI are separate projects with separate dependencies; never import clinical
-  skills or knowledge bases here. Sibling skills may be read for technique only.
-- No absolute filesystem paths in tracked files: resolve through `import.meta.url` with
-  `fileURLToPath`, or a documented environment variable. `%~dp0` is for `.cmd` launchers only.
-- `mega-examples/` is its own git repo: run `npm --prefix mega-examples start -- <name>`, never
-  `npx mex` from the root.
-- Course deliverables use the challenge identity, never the operator's personal account or
-  `github-mcp-server`.
-
-## 2. Autonomous execution and proportional verification
-- Act on internal work without asking: reading, editing, local commands, local tests. Ask before
-  host-wide or system-wide changes, and before paid model runs in `mega-examples`.
-- Verify by blast radius, not with blanket suites, and report which command ran and why:
-  - `localized_code` - targeted unit tests for the module or utility touched.
-  - `doc_only` - `node tools/check.mjs`.
-  - `policy_change` - `AGENTS.md`, `SKILL.md`, `.agents/rules/*`, `*.tool.json`: the synthetic
-    matrix of section 5, plus static analysis.
-  - `cross_cutting_security` - `tools/agent-guard.mjs`, `tools/agent-loop.mjs`,
-    `tools/journal.mjs`, `tools/sanitize.mjs`, `tools/resumable-approval.mjs`, root architecture:
-    `node --run test`.
-- Peer review gates non-trivial work, but the loop itself is not restated here: `.clinerules` §5
-  owns the reviewer tier, the evidence a dispatch must carry and the round cap. Report the verdict
-  and what changed, never "reviewed" on its own.
-- Reuse what was already verified: check hand-offs (`rig-handover/`, an existing `node_modules`)
-  before installing or scaffolding again.
-## 3. Toolbox
-One canonical tool per job, and each tool carries its own contract. The table lists the tools that
-publish a schema: read that `.tool.json` before the call, because the schema, not memory, is the
-contract. A module the loop invokes without a schema of its own is reached through
-`tools/agent-loop.mjs`, whose guard is the contract; scripts run directly with `node`
-(`eval-*.mjs`, `sanitize.mjs`, `resumable-approval.mjs`, `ambient-listener.mjs`) carry their own
-docblock as the contract. Schema filenames do not always mirror module filenames - the link in the
-table is the path to read.
-
-| Job | Tool | Contract | Skill |
-| :--- | :--- | :--- | :--- |
-| Challenge Hub HTTP | [`tools/hub-client.mjs`](./tools/hub-client.mjs) | [`hub-client.tool.json`](./tools/hub-client.tool.json) | - |
-| Transcription | [`tools/transcribe.mjs`](./tools/transcribe.mjs) | [`transcribe.tool.json`](./tools/transcribe.tool.json) | [`multi-source-worker`](./.agents/skills/multi-source-worker/SKILL.md) |
-| Static gate | [`tools/check.mjs`](./tools/check.mjs) | [`check.tool.json`](./tools/check.tool.json) | - |
-| Skill gate | [`tools/check-skills.mjs`](./tools/check-skills.mjs) | [`check-skills.tool.json`](./tools/check-skills.tool.json) | [`skill-shaper`](./.agents/skills/skill-shaper/SKILL.md) |
-| Knowledge base check | [`tools/kb-check.mjs`](./tools/kb-check.mjs) | [`kb-check.tool.json`](./tools/kb-check.tool.json) | [`knowledge`](./.agents/skills/knowledge/SKILL.md) |
-| Tool ledger | [`tools/journal.mjs`](./tools/journal.mjs) | [`journal.tool.json`](./tools/journal.tool.json) | - |
-| Recall of past sessions | [`tools/memory/contextual-recall.mjs`](./tools/memory/contextual-recall.mjs) | [`contextual-recall.tool.json`](./tools/contextual-recall.tool.json) | [`rook-loop`](./.agents/skills/rook-loop/SKILL.md) |
-| System diff of a PR | [`tools/system-diff-build.mjs`](./tools/system-diff-build.mjs) | [`system-diff.tool.json`](./tools/system-diff.tool.json) | [`system-diff`](./.agents/skills/system-diff/SKILL.md) |
-| Client deliverable | [`tools/client-handoff.mjs`](./tools/client-handoff.mjs) | [`client-handoff.tool.json`](./tools/client-handoff.tool.json) | [`client-handoff`](./.agents/skills/client-handoff/SKILL.md) |
-| Standing brief | [`tools/brief.mjs`](./tools/brief.mjs) | [`brief.tool.json`](./tools/brief.tool.json) | [`brief`](./.agents/skills/brief/SKILL.md) |
-| Codebase map | [`tools/codebase-map.mjs`](./tools/codebase-map.mjs) | [`codebase-map.tool.json`](./tools/codebase-map.tool.json) | - |
-| Product view | [`tools/product-view.mjs`](./tools/product-view.mjs) | [`product-view.tool.json`](./tools/product-view.tool.json) | - |
-
-- Course traffic goes through `hub-client.mjs`, the single client, which masks secrets; the
-  evidence-log format itself is owned by `challenge_playbook.md`.
-- A skill names the tool it drives in `metadata.tools` and its contract in `metadata.schema`; both
-  must resolve to a file inside the repository, and a skill that ships `scripts/` must declare one.
-  No gate reads those paths, so `node tools/skill-links.test.mjs` is the health test that proves it.
-
-## 4. Background work and delegation
-- The coordinator never stalls on a long job. Delegate through the
-  [`crew`](./.agents/skills/crew/SKILL.md) skill, `tools/scheduler/runner.mjs` or
-  `tools/gateway/task-bridge.mjs`; a detached job reports its PID, log path and result path in the
-  turn that starts it, and its log is read before anything else happens. Those two modules carry
-  their docblock as their contract and are driven by the guarded loop, not called directly.
-- Results land on disk (`.runs/<job>/result.json`), scrubbed of tokens, PII and PHI, never in
-  conversation memory alone; workers signal completion instead of being polled in a loop.
-- Work that stays open waits behind a standing watcher, not a held terminal.
-
-## 5. Synthetic evaluation gate
-- Instruction and skill changes are never validated on happy paths. Run the permutation matrices -
-  `node tools/eval-agent-primitives.mjs`, `node tools/eval-agents-capabilities.mjs`,
-  `node tools/eval-skill.mjs` - and compare pass rates, not impressions.
-- Assertions are code (`node:assert`), never a self-review.
-
-## 6. Layered defense and redaction
-- Untrusted text (mail, fetched pages, feeds) passes `tools/sanitize.mjs` before it reaches a model
-  context, and network-facing tools and logs pass an outbound masking filter.
-- Least privilege: an agent handling untrusted input gets no irreversible write, dispatch or
-  credentialed tool without an approval gate.
-- Inbound channels authenticate the sender in code before any tool, link fetch or model call, and
-  verify webhook signatures (HMAC-SHA256) by comparing fixed-length raw digests with
-  `crypto.timingSafeEqual`, rejecting a length mismatch before the compare, inside a bounded clock
-  window and against a one-time nonce, dropping unverified, stale or replayed messages with zero
-  side effects.
-- Outbound bundles use AES-256-GCM with a PBKDF2-SHA256 key at 600,000 iterations, a per-run nonce
-  and the tag checked before decryption; keys live in the runner's secret store and never in
-  `workflow_dispatch` inputs.
-- No plaintext PHI or PII in prompts, logs, the journal, `.runs/`, `.approvals/` or hand-offs;
-  clinical data never enters this repository.
-- Errors and refusals never echo inputs, secrets or payloads.
-- A channel identity tainted by a failed or unauthorized round is replaced, not reused.
-
-## 7. Guarded execution and memory
-- Every autonomous loop runs through [`tools/agent-loop.mjs`](./tools/agent-loop.mjs) under
-  [`tools/agent-guard.mjs`](./tools/agent-guard.mjs): empirical limits from
-  `tools/model-limits.json`, sandboxed paths, shell allowlisting, fail-closed policy, own-property
-  dispatch, and rejection of chaining, subshells and redirects. A tool call rewritten by a
-  `beforeTool` hook is re-checked before it runs.
-- Tests carry exception-safe cleanup, unique session ids and exact assertions, so a guard suite
-  proves behaviour instead of restating it.
-- Learned rules load from `memory/MEMORY.md` through
-  [`tools/memory/rule-budget.mjs`](./tools/memory/rule-budget.mjs) and are demoted into the advisory
-  manifest when the context budget is exceeded. `AGENTS.md` holds the hard rules, memory the soft.
-## 8. Recall and resumable approvals
-- Past notes and hand-offs arrive through
-  [`tools/memory/contextual-recall.mjs`](./tools/memory/contextual-recall.mjs), bounded by the same
-  budget, and never by pasting whole transcripts.
-- An approval that needs a human is suspended, not held: `tools/resumable-approval.mjs` writes a
-  tamper-evident record under `.approvals/`, the loop exits `suspended`, and resumption validates
-  the fingerprint and TTL before acting.
-
-## 9. Journal, routing and ambient signals
-- Guarded tool calls are appended to `.runs/journal.jsonl` with SHA-256 hash chaining and outbound
-  redaction; `tools/journal.mjs` exposes the read side.
-- Routing never downgrades security-sensitive work: `routeModel` keeps security, secrets, auth,
-  compliance, PHI and PII on the reasoning tier, and reviewer dispatches use the security tier named
-  in `.agents/model-routing.json`.
-- Ambient listeners (`tools/ambient-listener.mjs`) stay inside the workspace root, coalesce events,
-  deduplicate task ids and contain their own errors.
+Hard cap: 6,000 characters. A rule needing a paragraph belongs in a skill, a memory subject, a tool schema
+or a playbook.
 
 ## Where the detail lives
-- Cost, model routing and shell hygiene - [`.clinerules`](./.clinerules) and
-  [`.agents/model-routing.json`](./.agents/model-routing.json).
-- Procedural workflows - the nine skills in [`.agents/skills/`](./.agents/skills): `client-handoff`,
-  `crew`, `keep`, `knowledge`, `multi-source-worker`, `rig`, `rook-loop`, `skill-shaper`,
-  `system-diff`.
-- Tool behaviour and contracts - each module's docblock and its `.tool.json`.
-- Episode-level operating detail -
-  [`.agents/rules/challenge_playbook.md`](./.agents/rules/challenge_playbook.md).
-- The map of the primitives - [`memory/CODEBASE-MAP.md`](./memory/CODEBASE-MAP.md), generated from the
-  docblocks and imports by `node tools/codebase-map.mjs`, and checked for staleness by `check.mjs`.
-- Learned rules - [`memory/MEMORY.md`](./memory/MEMORY.md), loaded by `rule-budget.mjs`.
-- Findings on this machine - `KEEP.md`, gitignored and absent in a fresh clone.
-- A shorter mirror for other harnesses -
-  [`.agents/rules/workspace_rules.md`](./.agents/rules/workspace_rules.md).
+
+| Topic | Read |
+| :--- | :--- |
+| routing a question to a memory file | [memory/MEMORY.md](./memory/MEMORY.md) |
+| guard, loop, journal, budget, scheduler, gateway | `memory/architecture-knowledge.md` |
+| conventions, docblocks, tests, canonical tools | `memory/code-knowledge.md` |
+| verification tiers, review loop, evidence | `memory/verification-knowledge.md` |
+| secrets, approvals, redaction | `memory/security-knowledge.md` |
+| skills catalog and their tools | `memory/skills-knowledge.md` |
+| hub client, MCP transports, deploys | `memory/api-knowledge.md` |
+| outcomes, briefs, triage marks | `memory/product-knowledge.md` |
+| course rounds, episode notes | `memory/course-knowledge.md` |
+| a tool's behaviour | its docblock, its `.tool.json`, `memory/CODEBASE-MAP.md` |
+
+## 1. Boundaries
+- MegaDEV and BioCore-AI are separate projects; never import clinical skills or knowledge bases here.
+- No absolute paths in tracked files: resolve through `import.meta.url`/`fileURLToPath` or a documented env
+  var. `%~dp0` is for `.cmd` launchers only.
+- `mega-examples/` is its own repo: `npm --prefix mega-examples start -- <name>`, never `npx mex` at the root.
+- Course deliverables use the challenge identity, never the operator's personal account or `github-mcp-server`.
+- `.gemini/` and `.copilot/` are copied Antigravity brains: out of the scanner, read only when a gap needs
+  them, never committed.
+
+## 2. Autonomy and proportional verification
+- Act on internal work without asking. Ask before host-wide or system-wide changes and before paid model
+  runs in `mega-examples`.
+- Verify by blast radius and report the command and why: `localized_code` - the module's unit tests;
+  `doc_only` - `node tools/check.mjs`; `policy_change` (this file, `SKILL.md`, `.agents/rules/*`,
+  `*.tool.json`) - synthetic matrix plus static analysis; `cross_cutting_security` (`agent-guard`,
+  `agent-loop`, `journal`, `sanitize`, `resumable-approval`, root architecture) - `node --run test`.
+- A red gate is never a baseline: escalate it and record it as open.
+- Peer review gates non-trivial work; `.clinerules` §5 owns the tier, the evidence and the round cap.
+
+## 3. Toolbox and skills
+- One canonical tool per job. Read the `.tool.json` before the call; the schema, not memory, is the
+  contract. A module without one is reached through `tools/agent-loop.mjs`.
+- A skill names its tool in `metadata.tools` and its contract in `metadata.schema`, both inside this
+  repository; `node tools/skill-links.test.mjs` proves the links.
+- The catalog is `memory/skills-knowledge.md` and `memory/CODEBASE-MAP.md`; never restate it here.
+
+## 4. Background work
+- Never stall on a long job: `crew`, `tools/scheduler/runner.mjs`, `tools/gateway/task-bridge.mjs`. Report
+  PID, log and result path as it starts, and read the log first on the next turn.
+- Results land at `.runs/<job>/result.json`, scrubbed; open work waits behind a watcher, not a shell.
+
+## 5. Synthetic evaluation gate
+- Instruction and skill changes are never validated on happy paths: run
+  `node tools/eval-agent-primitives.mjs`, `node tools/eval-agents-capabilities.mjs`, `node tools/eval-skill.mjs`,
+  and compare pass rates.
+- Assertions are code (`node:assert`), never self-review.
+
+## 6. Layered defense
+- Untrusted text passes `tools/sanitize.mjs` before a model reads it; outbound tools and logs pass a masking
+  filter.
+- Least privilege: no irreversible write, dispatch or credentialed tool for untrusted input without an
+  approval gate.
+- No plaintext PHI or PII in prompts, logs, `.runs/`, `.approvals/` or hand-offs; errors and refusals echo
+  nothing.
+- Sender authentication, bundle encryption and channel replacement: `memory/security-knowledge.md`.
+
+## 7. Guarded execution and memory
+- Every autonomous loop runs through `tools/agent-loop.mjs` under `tools/agent-guard.mjs`: limits from
+  `tools/model-limits.json`, sandboxed paths, shell allowlisting, fail-closed policy, own-property dispatch.
+  A call rewritten by a `beforeTool` hook is re-checked before it runs.
+- Tests carry exception-safe cleanup, unique ids and exact assertions.
+- Memory loads as a tree through `tools/memory/rule-budget.mjs`: the index is hard, each subject soft, the
+  tail demotes first. `AGENTS.md` holds hard rules, memory the soft; measure before adding.
+
+## 8. Recall and resumable approvals
+- Past notes arrive through `tools/memory/contextual-recall.mjs`, bounded by the same budget, never as a
+  pasted transcript.
+- An approval needing a human is suspended, not held: `tools/resumable-approval.mjs` writes a tamper-evident
+  record under `.approvals/`, the loop exits `suspended`, and resumption checks fingerprint and TTL.
+
+## 9. Journal, routing, ambient
+- Guarded calls append to `.runs/journal.jsonl` with SHA-256 hash chaining and outbound redaction;
+  `tools/journal.mjs` reads it.
+- Routing never downgrades security work; reviewer dispatches use the security tier in
+  `.agents/model-routing.json`.
+- Ambient listeners stay inside the workspace root, coalesce, deduplicate and contain their own errors.

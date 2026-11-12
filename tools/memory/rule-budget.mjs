@@ -2,43 +2,229 @@
  * @fileoverview Enforces token and byte budgets for AGENTS.md and memory rules.
  * Demotes non-hard rules when soft/hard thresholds are approached and injects
  * an advisory manifest so agents know where to inspect demoted rules on demand.
+ *
+ * Memory is a tree, not one file: `memory/MEMORY.md` is the index (a hard rule, never
+ * demoted, so routing always reaches the model) and every `.md` it links to is a subject
+ * file loaded as its own soft rule. A subject that does not fit is demoted alone, and the
+ * advisory manifest names the file to read on demand, so overflow costs one subject
+ * instead of the whole memory.
  */
 
 import fs from 'node:fs';
 import path from 'node:path';
 import { RuleBudgetExceededError } from './types.mjs';
 
-export const HARD_TOKEN_LIMIT = 20_000;
-export const HARD_BYTE_LIMIT = 24 * 1024; // 24,576 bytes (24KB)
+export const HARD_TOKEN_LIMIT = 24_000;
+export const HARD_BYTE_LIMIT = 36 * 1024; // 36,864 bytes: AGENTS.md plus the whole memory tree
 
-export function loadProjectMemoryRules(workspaceRoot = process.cwd()) {
-  const candidatePaths = [
-    path.join(workspaceRoot, 'memory', 'MEMORY.md'),
-    path.join(workspaceRoot, '.claude', 'memory', 'MEMORY.md'),
-  ];
+/** The index file: always loaded, never demoted. */
+export const MEMORY_INDEX_NAME = 'MEMORY.md';
+/** The index routes, so it must stay readable at a glance. */
+export const INDEX_BYTE_CAP = 3_072;
+/** One subject, one file: a subject that outgrows this is split, not grown. */
+export const SUBJECT_BYTE_CAP = 4_096;
 
-  const loadedRules = [];
-  for (const p of candidatePaths) {
-    if (fs.existsSync(p)) {
-      try {
-        const content = fs.readFileSync(p, 'utf-8').trim();
-        if (content.length > 0) {
-          const relPath = path.relative(workspaceRoot, p).replace(/\\/g, '/');
-          loadedRules.push({
-            id: 'project-memory-lamarck',
-            content,
-            hard: false,
-            path: relPath,
-            summary: 'Lamarck auto-curated conventions, gotchas, and tool recipes',
-          });
-          break;
-        }
-      } catch {
-        // Fail-safe: if unreadable, ignore
-      }
+/** Generated or rendered files that live beside memory and were never rules. */
+const RESERVED_MEMORY_FILES = new Set(['CODEBASE-MAP.md', 'PRODUCT-VIEW.html']);
+
+const MEMORY_LINK_RE = /\]\(([^()\s]+\.md)\)/gi;
+
+function findMemoryIndex(workspaceRoot) {
+  for (const rel of [
+    path.join('memory', MEMORY_INDEX_NAME),
+    path.join('.claude', 'memory', MEMORY_INDEX_NAME),
+  ]) {
+    const candidate = path.join(workspaceRoot, rel);
+    if (fs.existsSync(candidate)) {
+      return candidate;
     }
   }
-  return loadedRules;
+  return null;
+}
+
+/**
+ * Subject files the index links to, in the order it links them: that order is priority,
+ * because `packSoftRules` keeps the earliest and demotes the tail.
+ * @param {string} indexContent
+ * @param {string} [indexName]
+ * @returns {string[]}
+ */
+export function listMemorySubjectFiles(indexContent, indexName = MEMORY_INDEX_NAME) {
+  if (typeof indexContent !== 'string') {
+    throw new TypeError('indexContent must be a string.');
+  }
+  const seen = new Set();
+  const subjects = [];
+  for (const match of indexContent.matchAll(MEMORY_LINK_RE)) {
+    const raw = match[1].trim().replace(/^\.\//, '');
+    if (!raw || raw.includes('/') || raw.includes('\\') || raw.includes(':') || raw.includes('..')) {
+      continue;
+    }
+    if (raw === MEMORY_INDEX_NAME || raw === indexName || RESERVED_MEMORY_FILES.has(raw) || seen.has(raw)) {
+      continue;
+    }
+    seen.add(raw);
+    subjects.push(raw);
+  }
+  return subjects;
+}
+
+function relativeTo(workspaceRoot, full) {
+  return path.relative(workspaceRoot, full).replace(/\\/g, '/');
+}
+
+/** One linked subject: it must exist, carry rules and stay inside its cap. */
+function describeSubject(dir, name, workspaceRoot, problems) {
+  const full = path.join(dir, name);
+  const rel = relativeTo(workspaceRoot, full);
+  if (!fs.existsSync(full)) {
+    problems.push(`${rel}: linked from the index but missing. A dangling link cannot load.`);
+    return null;
+  }
+  const bytes = Buffer.byteLength(fs.readFileSync(full, 'utf-8'), 'utf8');
+  if (bytes === 0) {
+    problems.push(`${rel}: empty subject file. Remove the link or write the rules.`);
+    return null;
+  }
+  if (bytes > SUBJECT_BYTE_CAP) {
+    problems.push(
+      `${rel}: ${bytes}B exceeds the ${SUBJECT_BYTE_CAP}B subject cap. Split it by subject or tighten the prose.`
+    );
+  }
+  return { name, path: rel, bytes };
+}
+
+/** A subject nobody links is a rule the model never reads. */
+function reportUnlinkedSubjects(dir, indexName, linked, workspaceRoot, problems) {
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (!entry.isFile() || !entry.name.endsWith('.md')) {
+      continue;
+    }
+    if (entry.name === indexName || RESERVED_MEMORY_FILES.has(entry.name) || linked.has(entry.name)) {
+      continue;
+    }
+    problems.push(
+      `${relativeTo(workspaceRoot, path.join(dir, entry.name))}: not linked from ${indexName}, so it never loads. Link it or delete it.`
+    );
+  }
+}
+
+/**
+ * Reads the memory tree and reports what is wrong with its shape. The gate in
+ * `tools/check.mjs` and the loader below share this, so a layout that cannot load is a
+ * failure instead of a silent no-op.
+ * @param {string} [workspaceRoot]
+ */
+export function inspectMemoryLayout(workspaceRoot = process.cwd()) {
+  const index = findMemoryIndex(workspaceRoot);
+  if (!index) {
+    return { ok: true, problems: [], index: null, subjects: [] };
+  }
+
+  const problems = [];
+  const indexRel = path.relative(workspaceRoot, index).replace(/\\/g, '/');
+  const indexContent = fs.readFileSync(index, 'utf-8');
+  const indexBytes = Buffer.byteLength(indexContent, 'utf8');
+  if (indexBytes > INDEX_BYTE_CAP) {
+    problems.push(
+      `${indexRel}: ${indexBytes}B exceeds the ${INDEX_BYTE_CAP}B index cap. It routes; detail belongs in a subject file.`
+    );
+  }
+
+  const dir = path.dirname(index);
+  const linked = listMemorySubjectFiles(indexContent, path.basename(index));
+  const subjects = [];
+  for (const name of linked) {
+    const subject = describeSubject(dir, name, workspaceRoot, problems);
+    if (subject) {
+      subjects.push(subject);
+    }
+  }
+  reportUnlinkedSubjects(dir, path.basename(index), new Set(linked), workspaceRoot, problems);
+
+  return {
+    ok: problems.length === 0,
+    problems,
+    index: { path: indexRel, bytes: indexBytes },
+    subjects,
+  };
+}
+
+/** First heading of a subject file, used as its line in the advisory manifest. */
+function subjectSummary(content, name) {
+  const heading = content.match(/^#\s+(.+)$/m);
+  return heading ? heading[1].trim() : name;
+}
+
+/**
+ * Loads the memory tree as rules: the index as a hard rule, each linked subject as its
+ * own soft rule. A single unlinked `MEMORY.md` still loads as one soft rule, so an older
+ * workspace keeps working.
+ * @param {string} [workspaceRoot]
+ */
+export function loadProjectMemoryRules(workspaceRoot = process.cwd()) {
+  const indexPath = findMemoryIndex(workspaceRoot);
+  if (!indexPath) {
+    return [];
+  }
+
+  let indexContent = '';
+  try {
+    indexContent = fs.readFileSync(indexPath, 'utf-8').trim();
+  } catch {
+    return []; // Fail-safe: unreadable memory is absent memory, not a crash
+  }
+  if (indexContent.length === 0) {
+    return [];
+  }
+
+  const indexRel = path.relative(workspaceRoot, indexPath).replace(/\\/g, '/');
+  const dir = path.dirname(indexPath);
+  const linked = listMemorySubjectFiles(indexContent, path.basename(indexPath));
+
+  if (linked.length === 0) {
+    return [
+      {
+        id: 'project-memory-lamarck',
+        content: indexContent,
+        hard: false,
+        path: indexRel,
+        summary: 'Lamarck auto-curated conventions, gotchas, and tool recipes',
+      },
+    ];
+  }
+
+  const rules = [
+    {
+      id: 'project-memory-index',
+      content: indexContent,
+      hard: true,
+      path: indexRel,
+      summary: 'Memory index; routes a question to the subject file that answers it',
+    },
+  ];
+
+  for (const name of linked) {
+    const full = path.join(dir, name);
+    let content = '';
+    try {
+      content = fs.readFileSync(full, 'utf-8').trim();
+    } catch {
+      continue; // A link to a missing file is reported by inspectMemoryLayout
+    }
+    if (content.length === 0) {
+      continue;
+    }
+    rules.push({
+      id: `memory:${name.replace(/\.md$/i, '')}`,
+      content,
+      hard: false,
+      path: path.relative(workspaceRoot, full).replace(/\\/g, '/'),
+      summary: subjectSummary(content, name),
+    });
+  }
+
+  return rules;
 }
 
 export function estimateTokens(text) {
@@ -220,7 +406,10 @@ export function enforceRuleBudget({
   }
 
   const combinedRules = [...rules];
-  if (workspaceRoot && !combinedRules.some((r) => r.id === 'project-memory-lamarck')) {
+  const alreadyCarriesMemory = combinedRules.some(
+    (r) => typeof r.id === 'string' && (r.id.startsWith('project-memory-') || r.id.startsWith('memory:'))
+  );
+  if (workspaceRoot && !alreadyCarriesMemory) {
     const memoryRules = loadProjectMemoryRules(workspaceRoot);
     combinedRules.push(...memoryRules);
   }

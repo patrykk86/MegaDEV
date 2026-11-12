@@ -114,7 +114,7 @@ const SECRET_RE = /\b(?:sk-[A-Za-z0-9_-]{16,}|v1\.[A-Za-z0-9._-]{20,})\b/g;
 export function safeText(value) {
   return String(value)
     .replace(ABSOLUTE_RE, '[absolute path]')
-    .replace(POSIX_ABSOLUTE_RE, (match, lead) => `${lead}[absolute path]`)
+    .replace(POSIX_ABSOLUTE_RE, (_match, lead) => `${lead}[absolute path]`)
     .replace(SECRET_RE, '[redacted]');
 }
 
@@ -205,39 +205,52 @@ function callersOf(primitives) {
   return index;
 }
 
+/** One node's local imports, appended to the walk so far; returns the next frontier. */
+function expandNode(node, byRel, seen, steps) {
+  const next = [];
+  for (const target of node.imports) {
+    if (steps.length >= MAX_STEPS) {
+      break;
+    }
+    if (seen.has(target) || !byRel.has(target)) {
+      continue;
+    }
+    seen.add(target);
+    steps.push(target);
+    next.push(byRel.get(target));
+  }
+  return next;
+}
+
+/** Breadth-first walk of local imports from one entry point, bounded by MAX_STEPS. */
+function walkImports(entry, byRel) {
+  const steps = [];
+  const seen = new Set([entry.rel]);
+  let frontier = [entry];
+  while (frontier.length > 0 && steps.length < MAX_STEPS) {
+    frontier = frontier.flatMap((node) => expandNode(node, byRel, seen, steps));
+  }
+  return steps;
+}
+
+/** Every path the entry and the primitives it reaches name, sorted and deduplicated. */
+function reachablePaths(entry, steps, byRel) {
+  const paths = new Set(entry.paths);
+  for (const rel of steps) {
+    for (const target of byRel.get(rel).paths) {
+      paths.add(target);
+    }
+  }
+  return [...paths].sort();
+}
+
 function flowsOf(primitives, callers) {
   const byRel = new Map(primitives.map((row) => [row.rel, row]));
   const entries = primitives.filter((row) => row.runnable && !(callers.get(row.rel) ?? []).length);
-  const flows = [];
-  for (const entry of entries) {
-    const steps = [];
-    const seen = new Set([entry.rel]);
-    let frontier = [entry];
-    while (frontier.length > 0 && steps.length < MAX_STEPS) {
-      const next = [];
-      for (const node of frontier) {
-        for (const target of node.imports) {
-          if (steps.length >= MAX_STEPS) {
-            break;
-          }
-          if (seen.has(target) || !byRel.has(target)) {
-            continue;
-          }
-          seen.add(target);
-          steps.push(target);
-          next.push(byRel.get(target));
-        }
-      }
-      frontier = next;
-    }
-    const paths = new Set(entry.paths);
-    for (const rel of steps) {
-      for (const target of byRel.get(rel).paths) {
-        paths.add(target);
-      }
-    }
-    flows.push({ entry: entry.rel, purpose: entry.purpose, steps, paths: [...paths].sort() });
-  }
+  const flows = entries.map((entry) => {
+    const steps = walkImports(entry, byRel);
+    return { entry: entry.rel, purpose: entry.purpose, steps, paths: reachablePaths(entry, steps, byRel) };
+  });
   return { flows: flows.slice(0, MAX_FLOWS), entryCount: entries.length };
 }
 

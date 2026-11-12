@@ -1,0 +1,12 @@
+# Code knowledge — how code is written here
+
+Pure Node.js 25 ESM, no build step, no absolute paths, one canonical module per job.
+
+- **No absolute paths in tracked files**: resolve through `import.meta.url` with `fileURLToPath`, or a documented environment variable; `%~dp0` is for `.cmd` launchers only. `node tools/check.mjs` fails on a drive root or a `/home|/Users` path, so a fixture string in a test is the one place a path may look real. source: `AGENTS.md` §1 · how: read
+- **Every module opens with a docblock**: the docblock is the contract when no `.tool.json` exists, and `tools/codebase-map.mjs` builds `memory/CODEBASE-MAP.md` from docblocks and local imports — a module without one shows as `(no docblock)` there, which is how `tools/system-diff-build.mjs` stayed invisible. source: `memory/CODEBASE-MAP.md` · how: ran
+- **A tool publishes a schema and a skill declares it**: read the `*.tool.json` before the call, because the schema is the contract; a skill names its tool in `metadata.tools` and its contract in `metadata.schema`, both resolving inside the repository, and `node tools/skill-links.test.mjs` proves the links. source: `AGENTS.md` §3 · how: ran
+- **Promote before you duplicate**: behaviour needed twice moves into `tools/` with a test, while a script inside one `s0Xe0Y/` folder is evidence and not infrastructure, because six adapters slow an architecture that one primitive keeps extendable. source: `s03e01/LESSON-NOTES.md` · how: read
+- **An installed pack keeps its own bytes**: a skill from outside is written exactly as sent and checked against the pack's sha256, and this workspace's gate adapts instead of the file — the description target moved from 300 to 512 — because trimming an artifact to fit a local rule breaks its integrity. source: `tools/check-skills.mjs` · how: ran
+- **Read the map before you scan**: `memory/CODEBASE-MAP.md` answers which primitive does what and what calls it without a crawl, and `node tools/codebase-map.mjs --check` fails when it is stale, so the map is either current or red. source: `tools/codebase-map.mjs` · how: ran
+- **Tests carry exact assertions and safe cleanup**: unique session ids, `finally` cleanup, `node:assert`, so a guard suite proves behaviour instead of restating it. source: `AGENTS.md` §7 · how: read
+- **One canonical tool per job**: a second HTTP client, a second transcriber or a `transcribe.py` beside `transcribe.mjs` is a defect the gate reports, because two implementations drift and only one gets the secret masking. source: `tools/check.mjs` · how: read
