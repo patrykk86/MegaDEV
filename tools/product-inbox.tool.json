@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "product_inbox",
+  "description": "Picks up product's answer to a Challenge after the session stops waiting for it. Watches two independent sources — the answerAt the course named, and the agent inbox for a message from the course's mail domain — and writes a resume record holding the product receipt whole, ready for the next turn to call resume-challenge. Every line it prints or logs masks the receipt.",
+  "metadata": {
+    "skill": null,
+    "standaloneReason": "One deterministic record from two clocks and no judgement to add; a skill would restate the flags without adding a step.",
+    "script": "tools/product-inbox.mjs",
+    "runtime": "node"
+  },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "challenge": {
+        "type": "string",
+        "description": "The Challenge uuid. Names the record and the default folder .runs/<challenge>/."
+      },
+      "receipts": {
+        "type": "string",
+        "description": "A file of `key: value` lines, as the course replies are saved: productReceipt, answerAt, and optionally url, session, challengeId, name."
+      },
+      "outdir": {
+        "type": "string",
+        "description": "Where resume.json and resume.log go. Defaults to .runs/<challenge>/."
+      },
+      "answerAt": {
+        "type": "string",
+        "format": "date-time",
+        "description": "The moment the course said product answers. Overrides the answerAt in the receipts file."
+      },
+      "inbox": {
+        "type": "string",
+        "description": "The agent inbox to read. Defaults to AGENTMAIL_INBOX in .env; the key comes from AGENTMAIL_API_KEY and is never printed."
+      },
+      "poll": {
+        "type": "number",
+        "default": 20000,
+        "description": "Milliseconds between checks while watching."
+      },
+      "timeout": {
+        "type": "number",
+        "default": 20,
+        "description": "Minutes to watch before giving up without a record."
+      },
+      "once": {
+        "type": "boolean",
+        "default": false,
+        "description": "Check once and exit: 0 when the record was written, 1 when the answer has not arrived."
+      },
+      "take": {
+        "type": "boolean",
+        "default": false,
+        "description": "Print what the next turn does, from an existing resume.json, with the receipt masked."
+      },
+      "json": {
+        "type": "boolean",
+        "default": false,
+        "description": "Also print the masked record as JSON."
+      },
+      "noInbox": {
+        "type": "boolean",
+        "default": false,
+        "description": "Skip the inbox and decide on the answer time alone, for a run with no network."
+      },
+      "selftest": {
+        "type": "boolean",
+        "default": false,
+        "description": "Assert the sender, message, readiness and masking rules with no network."
+      }
+    },
+    "additionalProperties": false
+  }
+}
