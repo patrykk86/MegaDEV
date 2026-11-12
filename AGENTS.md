@@ -62,6 +62,9 @@ table is the path to read.
 
 - Course traffic goes through `hub-client.mjs`, the single client, which masks secrets; the
   evidence-log format itself is owned by `challenge_playbook.md`.
+- A skill names the tool it drives in `metadata.tools` and its contract in `metadata.schema`; both
+  must resolve to a file inside the repository, and a skill that ships `scripts/` must declare one.
+  No gate reads those paths, so `node tools/skill-links.test.mjs` is the health test that proves it.
 
 ## 4. Background work and delegation
 - The coordinator never stalls on a long job. Delegate through the
