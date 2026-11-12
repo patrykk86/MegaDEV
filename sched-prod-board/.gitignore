@@ -1,0 +1,8 @@
+# The night's key, written by build.mjs from the session record.
+app/config.js
+# Local deploy and recording leftovers.
+.wrangler/
+dist/
+*.webm
+node_modules/
+recordings/
