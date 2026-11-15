@@ -6,8 +6,12 @@
  * - description stays third person, inside `DESC_TARGET`, and names an owner for "Not for X".
  * - body has no placeholders, no broken relative links and stays inside the line cap.
  * - frontmatter keys stay inside the allowed set, and two descriptions may not overlap.
+ *
+ * A skill listed in `VENDORED_SKILLS` with a matching sha256 skips the description *style* rules only:
+ * its wording belongs to the pack it came from, and rewriting it would break that pack's integrity.
  */
 
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -22,6 +26,42 @@ const ALLOWED_KEYS = new Set(['name', 'description', 'license', 'metadata', 'dis
 // number this repository chose.
 const DESC_MAX = 1024;
 const DESC_TARGET = 512;
+
+/**
+ * Skills installed from outside this repository, byte for byte, with the sha256 their SKILL.md had
+ * when it was installed. Their wording is the pack's, not this workspace's, so the style rules that
+ * describe how *we* write a description (third person, no first person, no file-extension list) do not
+ * apply to them; a check that rewrote the file to pass would break the integrity of the pack.
+ *
+ * An exemption is not a blank cheque: only the style rules are skipped, every other check still runs,
+ * and the sha256 is verified on every gate run. Edit a vendored file and the hash stops matching, so
+ * the exemption silently stops applying and the file is judged like any other. Remove an entry here
+ * when the pack is upgraded, and record the new hash in the same commit.
+ *
+ * `provenance` is the pack the skill came from, so the next reader knows who owns the wording.
+ */
+export const VENDORED_SKILLS = Object.freeze([
+  {
+    name: 'rig',
+    provenance: "rook's rig",
+    sha256: '6b5a60ccc954ffc41d55caa5206e148aabcae86efc5c55bda09b763b4063dbbe',
+  },
+  {
+    name: 'keep',
+    provenance: "rook's rig",
+    sha256: 'b5581387ac9ea94804daf422ac714e292cfccb3fb6cd9f921b7cf3f43c04d69f',
+  },
+  {
+    name: 'rook-loop',
+    provenance: "rook's rig",
+    sha256: '8cdb13012bf9238925db4278321262ff43d4c59b6cb4a2eb1f39ecd4866fbae3',
+  },
+  {
+    name: 'prove',
+    provenance: "rook's rig",
+    sha256: '535de280ba4fc72241aa5e880f49a628df9deca6e94329b7d01ec273870f7208',
+  },
+]);
 
 const DESC_RULES = [
   { lvl: 'error', re: /use this skill (whenever|any ?time|for any|for all)/i, msg: 'over-triggering phrase' },
@@ -111,14 +151,40 @@ function checkName(name, folder, rel, problems) {
   }
 }
 
-function checkDescription(d, rel, problems) {
+function hashOfFile(file) {
+  return crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+}
+
+/**
+ * The vendored entry that excuses this skill's description style, or null.
+ *
+ * The hash is the proof: a pack installed byte for byte matches, and the moment somebody edits the
+ * file the entry stops applying, so the file is judged on its own wording again. That is why the
+ * exemption cannot quietly cover a hand-written description.
+ *
+ * @param {string} skillDir
+ * @param {string} skillFile
+ * @returns {{ name: string, provenance: string }|null}
+ */
+export function vendoredEntryFor(skillDir, skillFile = path.join(skillDir, 'SKILL.md')) {
+  const name = path.basename(skillDir);
+  const entry = VENDORED_SKILLS.find((candidate) => candidate.name === name);
+  if (!entry || !fs.existsSync(skillFile)) {
+    return null;
+  }
+  return hashOfFile(skillFile) === entry.sha256
+    ? { name: entry.name, provenance: entry.provenance }
+    : null;
+}
+
+function checkDescription(d, rel, problems, vendored = null) {
   if (typeof d !== 'string' || !d.trim()) {
     problems.push(`${rel}: missing "description"`);
     return;
   }
   if (d.length > DESC_MAX) {
     problems.push(`${rel}: description ${d.length} chars > ${DESC_MAX}`);
-  } else if (d.length > DESC_TARGET) {
+  } else if (d.length > DESC_TARGET && !vendored) {
     problems.push(`${rel}: description ${d.length} chars > ${DESC_TARGET} target limit`);
   }
   if (/[<>]/.test(d)) {
@@ -126,6 +192,9 @@ function checkDescription(d, rel, problems) {
   }
   if (/not for/i.test(d) && !/use [`']?[a-z0-9-]+/i.test(d)) {
     problems.push(`${rel}: "Not for X" must name the owning skill ("use Y")`);
+  }
+  if (vendored) {
+    return;
   }
   for (const r of DESC_RULES) {
     if (r.lvl === 'error' && r.re.test(d)) {
@@ -166,7 +235,7 @@ export function validateSkill(skillDir, problems) {
   }
   const { fm, body } = parsed;
   checkName(fm.name, path.basename(skillDir), rel, problems);
-  checkDescription(fm.description, rel, problems);
+  checkDescription(fm.description, rel, problems, vendoredEntryFor(skillDir, file));
   checkBody(body, rel, skillDir, problems);
 
   for (const k of Object.keys(fm)) {

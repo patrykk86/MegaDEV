@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict'
+import crypto from 'node:crypto'
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
@@ -9,6 +10,8 @@ import {
   DESC_TARGET,
   parseFrontmatter,
   validateSkill,
+  VENDORED_SKILLS,
+  vendoredEntryFor,
 } from './check-skills.mjs'
 
 test('parseFrontmatter extracts YAML frontmatter and body cleanly', () => {
@@ -115,4 +118,76 @@ Body with broken link [test](non-existent-file.md) and <TODO> placeholder.
   const { fm } = parseFrontmatter(mockRaw)
   assert.equal(fm.name, 'bad_name')
   assert.match(fm.description, /Use this skill whenever/)
+})
+
+test('a vendored skill skips the description style rules and nothing else', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'vendored-'))
+  try {
+    const name = VENDORED_SKILLS[0].name
+    const dir = path.join(root, name)
+    fs.mkdirSync(dir, { recursive: true })
+    const file = path.join(dir, 'SKILL.md')
+    // First-person, opens with "Use", and names two extensions: three style failures at once.
+    const description =
+      'Use when I need to check .mp3 and .wav handling. I can do that.'
+    fs.writeFileSync(
+      file,
+      `---\nname: ${name}\ndescription: ${description}\n---\n\nBody with <TODO> placeholder.\n`,
+      'utf-8',
+    )
+
+    // The hash of this fixture is not the installed one, so the exemption does not apply.
+    const unmodified = []
+    validateSkill(dir, unmodified)
+    assert.ok(
+      unmodified.some((p) => p.includes('description must be third person')),
+      'an edited pack is judged on its own wording',
+    )
+    assert.equal(vendoredEntryFor(dir, file), null)
+
+    // Re-register the fixture under its real hash: only the style findings disappear.
+    const realHash = crypto
+      .createHash('sha256')
+      .update(fs.readFileSync(file))
+      .digest('hex')
+    const entry = VENDORED_SKILLS.find((candidate) => candidate.name === name)
+    const original = entry.sha256
+    entry.sha256 = realHash
+    try {
+      assert.deepEqual(vendoredEntryFor(dir, file), { name, provenance: entry.provenance })
+      const exempt = []
+      validateSkill(dir, exempt)
+      assert.ok(
+        exempt.some((p) => p.includes('placeholder text in body')),
+        'the body rules still run on a vendored skill',
+      )
+      assert.ok(
+        !exempt.some((p) => p.includes('description')),
+        `no description finding survives the exemption: ${exempt.join(' | ')}`,
+      )
+    } finally {
+      entry.sha256 = original
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true })
+  }
+})
+
+test('every installed vendored pack still matches the hash the exemption records', () => {
+  const skillsRoot = path.join(process.cwd(), '.agents', 'skills')
+  const checked = []
+  for (const entry of VENDORED_SKILLS) {
+    const dir = path.join(skillsRoot, entry.name)
+    if (!fs.existsSync(dir)) {
+      continue
+    }
+    checked.push(entry.name)
+    assert.deepEqual(
+      vendoredEntryFor(dir),
+      { name: entry.name, provenance: entry.provenance },
+      `${entry.name}: SKILL.md changed since it was installed, so the exemption no longer applies. ` +
+        'Update the hash in tools/check-skills.mjs in the same commit as the pack.',
+    )
+  }
+  assert.ok(checked.length > 0, 'no vendored pack is installed in this checkout')
 })

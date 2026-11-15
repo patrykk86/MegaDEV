@@ -233,8 +233,6 @@ function checkNoAbsolutePaths(problems) {
   }
 }
 
-const VENDOR_SKILLS = new Set(['rig', 'keep', 'read', 'rook-loop']);
-
 function checkSkills(problems) {
   const skillsRoot = path.join(ROOT, '.agents', 'skills');
   if (!fs.existsSync(skillsRoot)) {
@@ -242,10 +240,12 @@ function checkSkills(problems) {
   }
   const skills = [];
   for (const e of fs.readdirSync(skillsRoot, { withFileTypes: true })) {
-    if (!e.isDirectory() || VENDOR_SKILLS.has(e.name)) {
+    if (!e.isDirectory()) {
       continue;
     }
     const sDir = path.join(skillsRoot, e.name);
+    // A vendored skill is validated; only its description style is exempt, and check-skills proves
+    // that by hash. Skipping it here would let a tampered pack pass unseen.
     validateSkill(sDir, problems);
     const skPath = path.join(sDir, 'SKILL.md');
     if (fs.existsSync(skPath)) {

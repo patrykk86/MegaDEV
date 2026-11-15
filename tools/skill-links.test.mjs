@@ -9,12 +9,13 @@
  */
 
 import assert from 'node:assert/strict';
+import crypto from 'node:crypto';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { parseFrontmatter } from './check-skills.mjs';
+import { parseFrontmatter, vendoredEntryFor, VENDORED_SKILLS } from './check-skills.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const OUTSIDE = /^(?:[A-Za-z]:[\\/]|\/)/;
@@ -51,7 +52,10 @@ function skillProblems(root, name) {
   }
   const links = declaredLinks(fm);
   const problems = links.flatMap((link) => linkProblem(root, name, link));
-  if (links.length === 0 && fs.existsSync(path.join(dir, 'scripts'))) {
+  // A vendored pack runs its own scripts and declares no link into this repository; the exemption is
+  // the same hash check that excuses its description wording, so a tampered pack is still judged.
+  const vendored = vendoredEntryFor(dir, skillFile) !== null;
+  if (links.length === 0 && fs.existsSync(path.join(dir, 'scripts')) && !vendored) {
     problems.push(`${name}: ships scripts/ but declares no metadata.tools`);
   }
   return problems;
@@ -77,6 +81,38 @@ test('every skill in this repository links to a tool that exists', (t) => {
     return;
   }
   assert.deepEqual(linkProblems(ROOT), []);
+});
+
+test('a vendored pack is exempt, and a tampered one is not', () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'skill-links-vendored-'));
+  const entry = VENDORED_SKILLS[0];
+  const dir = path.join(root, '.agents', 'skills', entry.name);
+  try {
+    fs.mkdirSync(path.join(dir, 'scripts'), { recursive: true });
+    fs.writeFileSync(path.join(dir, 'scripts', 'go.mjs'), '// go\n', 'utf-8');
+    const head = `---\nname: ${entry.name}\ndescription: A vendored skill.\n---\n\n# ${entry.name}\n`;
+    const file = path.join(dir, 'SKILL.md');
+    fs.writeFileSync(file, head, 'utf-8');
+
+    // Not the installed bytes, so the hash does not match and the exemption does not apply.
+    assert.deepEqual(linkProblems(root), [
+      `${entry.name}: ships scripts/ but declares no metadata.tools`,
+    ]);
+
+    const original = entry.sha256;
+    entry.sha256 = crypto.createHash('sha256').update(head, 'utf-8').digest('hex');
+    try {
+      assert.deepEqual(
+        linkProblems(root),
+        [],
+        'an unmodified vendored pack runs its own scripts and links to nothing here',
+      );
+    } finally {
+      entry.sha256 = original;
+    }
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 test('the health check catches a missing tool, an absolute path and an unlinked scripts folder', () => {
