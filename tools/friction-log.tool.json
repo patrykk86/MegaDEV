@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "name": "friction_log",
+  "description": "Files the moment an agent worked around a problem instead of reporting it, and sweeps the open records into agent-ready, needs-human or blocked. A record naming a hard rule, a tool contract or a guarded module is needs-human whatever else it says, so a daily run hands a person only the decisions that are theirs.",
+  "metadata": {
+    "skill": null,
+    "standaloneReason": "One deterministic record and one deterministic mark; a skill would restate the flags without adding a step.",
+    "script": "tools/friction-log.mjs",
+    "runtime": "node"
+  },
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "what": {
+        "type": "string",
+        "minLength": 8,
+        "description": "What happened, in the words of the agent that hit it."
+      },
+      "wanted": {
+        "type": "string",
+        "minLength": 8,
+        "description": "What the agent was trying to achieve when it hit the friction."
+      },
+      "reproduce": {
+        "type": "string",
+        "minLength": 8,
+        "description": "The command or steps that bring the friction back."
+      },
+      "cost": {
+        "type": "string",
+        "minLength": 8,
+        "description": "What it cost in time, tokens or retries."
+      },
+      "investigation": {
+        "type": "string",
+        "description": "What the agent already found out, so the next run does not repeat it."
+      },
+      "decision": {
+        "type": "string",
+        "enum": ["product", "architecture"],
+        "description": "Set when the fix is a decision rather than a repair; the record is then needs-human."
+      },
+      "files": {
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$)).+$"
+        },
+        "description": "Workspace-relative files the friction touches. A protected path or any *.tool.json makes the record needs-human."
+      },
+      "id": {
+        "type": "string",
+        "pattern": "^[a-z0-9][a-z0-9-]{0,63}$",
+        "description": "Optional id; defaults to a slug of `what` plus the fingerprint."
+      },
+      "dir": {
+        "type": "string",
+        "pattern": "^(?!/)(?![A-Za-z]:)(?!.*(?:^|/)\\.\\.(?:/|$)).+$",
+        "description": "Folder for the records. Defaults to .runs/friction."
+      },
+      "sweep": {
+        "type": "boolean",
+        "default": false,
+        "description": "Mark every open record and write sweep.json and sweep.md beside them."
+      },
+      "check": {
+        "type": "boolean",
+        "default": false,
+        "description": "Sweep without writing, and exit 1 when any record is blocked."
+      },
+      "selftest": {
+        "type": "boolean",
+        "default": false,
+        "description": "Assert the validation, marking and identity rules with no filesystem writes."
+      }
+    },
+    "additionalProperties": false,
+    "required": ["what", "wanted", "reproduce", "cost"]
+  }
+}

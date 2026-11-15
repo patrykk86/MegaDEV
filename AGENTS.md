@@ -54,6 +54,8 @@ or a playbook.
 - Never stall on a long job: `crew`, `tools/scheduler/runner.mjs`, `tools/gateway/task-bridge.mjs`. Report
   PID, log and result path as it starts, and read the log first on the next turn.
 - Results land at `.runs/<job>/result.json`, scrubbed; open work waits behind a watcher, not a shell.
+- A workaround is a finding: file it with `node tools/friction-log.mjs`; the daily sweep marks it
+  `agent-ready`, `needs-human` or `blocked`.
 
 ## 5. Synthetic evaluation gate
 - Instruction and skill changes are never validated on happy paths: run

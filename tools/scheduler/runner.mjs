@@ -16,6 +16,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { maskSecretValue } from '../hub-client.mjs';
+import { MARKS, sweep } from '../friction-log.mjs';
 import { enforceRuleBudget, loadProjectMemoryRules } from '../memory/rule-budget.mjs';
 import { executeNightlyAudit } from '../nightly-audit.mjs';
 import { redactOutbound } from '../sanitize.mjs';
@@ -251,6 +252,25 @@ export function handleLaneCheckTask(workspaceRoot = WORKSPACE_ROOT) {
 }
 
 /**
+ * Task Handler: Friction Sweep
+ *
+ * Marks every open friction record and reports the ones a person has to decide. A blocked record is
+ * not a failure of the sweep: it is a record that cannot be acted on yet, and the sweep names it.
+ */
+export function handleFrictionSweepTask(workspaceRoot = WORKSPACE_ROOT) {
+  const result = sweep({ root: workspaceRoot });
+  const { counts } = result;
+  return {
+    ok: true,
+    total: counts.total,
+    agentReady: counts[MARKS.AGENT_READY],
+    needsHuman: counts[MARKS.NEEDS_HUMAN],
+    blocked: counts[MARKS.BLOCKED],
+    message: `Friction sweep: ${counts.total} open, ${counts[MARKS.AGENT_READY]} agent-ready, ${counts[MARKS.NEEDS_HUMAN]} needs-human, ${counts[MARKS.BLOCKED]} blocked.`,
+  };
+}
+
+/**
  * Core Background Scheduler
  */
 export class BackgroundScheduler {
@@ -268,6 +288,7 @@ export class BackgroundScheduler {
     this.registerHandler('audit', () => handleAuditTask(this.workspaceRoot));
     this.registerHandler('memory_budget', () => handleMemoryBudgetTask(this.workspaceRoot));
     this.registerHandler('lane_check', () => handleLaneCheckTask(this.workspaceRoot));
+    this.registerHandler('friction_sweep', () => handleFrictionSweepTask(this.workspaceRoot));
   }
 
   registerHandler(action, fn) {

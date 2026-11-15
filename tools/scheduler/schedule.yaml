@@ -19,3 +19,9 @@ tasks:
     enabled: true
     action: "lane_check"
     description: "Checks rig lane heartbeat and active lane status"
+  - id: "friction-sweep"
+    name: "Friction Log Sweep"
+    cron: "0 20 * * *"
+    enabled: true
+    action: "friction_sweep"
+    description: "Marks every open friction record agent-ready, needs-human or blocked, and writes sweep.json beside them"

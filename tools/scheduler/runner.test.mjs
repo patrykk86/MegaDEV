@@ -7,6 +7,7 @@ import {
   BackgroundScheduler,
   handleAuditTask,
   handleLaneCheckTask,
+  handleFrictionSweepTask,
   handleMemoryBudgetTask,
   matchCron,
   matchCronField,
@@ -71,7 +72,7 @@ tasks:
   assert.equal(parsed.tasks[1].enabled, false);
 });
 
-test('Repeatable Task Handlers: audit, memory budget, and challenge lane', () => {
+test('Repeatable Task Handlers: audit, memory budget, challenge lane and friction sweep', () => {
   const memoryRes = handleMemoryBudgetTask(WORKSPACE_ROOT);
   assert.equal(memoryRes.ok, true);
   assert.ok(memoryRes.tokens > 0);
@@ -83,6 +84,14 @@ test('Repeatable Task Handlers: audit, memory budget, and challenge lane', () =>
 
   const auditRes = handleAuditTask(WORKSPACE_ROOT);
   assert.ok(auditRes.auditId.startsWith('audit-'));
+
+  const frictionRes = handleFrictionSweepTask(WORKSPACE_ROOT);
+  assert.equal(frictionRes.ok, true);
+  assert.equal(
+    frictionRes.agentReady + frictionRes.needsHuman + frictionRes.blocked,
+    frictionRes.total,
+  );
+  assert.ok(frictionRes.message.startsWith('Friction sweep:'));
 });
 
 test('BackgroundScheduler: tick dispatches daily 20:00 tasks and alerts listeners', async () => {
@@ -101,11 +110,12 @@ test('BackgroundScheduler: tick dispatches daily 20:00 tasks and alerts listener
   const at2000 = new Date('2026-11-03T20:00:00.000Z');
   const tickResult = await scheduler.tick(at2000);
 
-  assert.equal(tickResult.executedCount, 3);
-  assert.equal(alerts.length, 3);
+  assert.equal(tickResult.executedCount, 4);
+  assert.equal(alerts.length, 4);
   assert.ok(alerts.some((a) => a.taskId === 'nightly-audit'));
   assert.ok(alerts.some((a) => a.taskId === 'memory-budget'));
   assert.ok(alerts.some((a) => a.taskId === 'challenge-lane'));
+  assert.ok(alerts.some((a) => a.taskId === 'friction-sweep'));
 
   // Tick at non-matching time dispatches 0 tasks
   const at1200 = new Date('2026-11-03T12:00:00.000Z');
