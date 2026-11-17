@@ -286,7 +286,7 @@ function recordToolJournal(ctx, state, effective, outcome, err, durationMs = 0) 
           tokens_used: state?.usage ?? 0,
         },
       },
-      { journalPath: ctx.journalPath },
+      { journalPath: ctx.journalPath, includeConfigHash: true, workspaceRoot: ctx.workspaceRoot },
     );
   } catch (jErr) {
     console.error(`[agent-loop] Journal append error: ${jErr?.message ?? String(jErr)}`);

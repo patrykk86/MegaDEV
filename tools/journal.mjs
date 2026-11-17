@@ -18,6 +18,30 @@ import { redactOutbound } from './sanitize.mjs';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 export const GENESIS_PREV_HASH = '0'.repeat(64);
 export const DEFAULT_JOURNAL_PATH = path.join(ROOT, '.runs', 'journal.jsonl');
+export const DEFAULT_CONFIG_FILES = [
+  'AGENTS.md',
+  '.clinerules',
+  'memory/MEMORY.md',
+  '.agents/model-routing.json',
+];
+
+/**
+ * Computes a deterministic SHA-256 content hash over the active workspace configuration files.
+ */
+export function computeConfigHash(workspaceRoot = ROOT, files = DEFAULT_CONFIG_FILES) {
+  const hash = crypto.createHash('sha256');
+  const sorted = [...files].sort();
+  for (const rel of sorted) {
+    const fullPath = path.join(workspaceRoot, rel);
+    if (fs.existsSync(fullPath)) {
+      hash.update(rel, 'utf8');
+      hash.update('\0', 'utf8');
+      hash.update(fs.readFileSync(fullPath, 'utf8'), 'utf8');
+      hash.update('\0', 'utf8');
+    }
+  }
+  return hash.digest('hex');
+}
 
 export class JournalTamperError extends Error {
   constructor(message) {
@@ -190,6 +214,11 @@ export function appendJournalEntry(entryInput, options = {}) {
   }
   if (entryInput.tokens_used !== undefined && rawPayload.tokens_used === undefined) {
     rawPayload.tokens_used = Number(entryInput.tokens_used);
+  }
+  if (entryInput.config_hash !== undefined && rawPayload.config_hash === undefined) {
+    rawPayload.config_hash = String(entryInput.config_hash);
+  } else if (options.includeConfigHash === true && rawPayload.config_hash === undefined) {
+    rawPayload.config_hash = computeConfigHash(options.workspaceRoot ?? ROOT);
   }
   const cleanPayload = JSON.parse(redactOutbound(JSON.stringify(rawPayload)));
 

@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import path from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { readJournalEntries } from '../journal.mjs';
+import { acquireLease, releaseLease } from '../resource-lease.mjs';
 import {
   BackgroundScheduler,
   handleAuditTask,
@@ -96,11 +98,15 @@ test('Repeatable Task Handlers: audit, memory budget, challenge lane and frictio
 
 test('BackgroundScheduler: tick dispatches daily 20:00 tasks and alerts listeners', async () => {
   const tempRunsDir = path.join(WORKSPACE_ROOT, '.runs', 'test-scheduler');
+  const tempJournal = path.join(tempRunsDir, 'journal.jsonl');
+  const tempLeases = path.join(tempRunsDir, 'leases');
   fs.mkdirSync(tempRunsDir, { recursive: true });
 
   const scheduler = new BackgroundScheduler({
     workspaceRoot: WORKSPACE_ROOT,
     runsDir: tempRunsDir,
+    journalPath: tempJournal,
+    leasesDir: tempLeases,
   });
 
   const alerts = [];
@@ -122,14 +128,72 @@ test('BackgroundScheduler: tick dispatches daily 20:00 tasks and alerts listener
   const emptyTick = await scheduler.tick(at1200);
   assert.equal(emptyTick.executedCount, 0);
 
-  // Check persisted JSONL dispatches
+  // Check persisted JSONL dispatches and journal config_hash
   const dispatchesFile = path.join(tempRunsDir, 'dispatches.jsonl');
   assert.equal(fs.existsSync(dispatchesFile), true);
   const lines = fs.readFileSync(dispatchesFile, 'utf8').trim().split('\n');
   assert.ok(lines.length >= 3);
 
+  const journalEntries = readJournalEntries({ journalPath: tempJournal });
+  assert.equal(journalEntries.length, 4);
+  assert.match(journalEntries[0].payload.config_hash, /^[0-9a-f]{64}$/);
+
   // Cleanup test run artifacts
   fs.rmSync(tempRunsDir, { recursive: true, force: true });
+});
+
+test('BackgroundScheduler: skips task on active lease conflict and records conflict in journal', async () => {
+  const tempRunsDir = path.join(WORKSPACE_ROOT, '.runs', 'test-scheduler-lease');
+  const tempJournal = path.join(tempRunsDir, 'journal.jsonl');
+  const tempLeases = path.join(tempRunsDir, 'leases');
+  fs.mkdirSync(tempRunsDir, { recursive: true });
+
+  const now = new Date('2026-11-17T18:00:00.000Z');
+  const held = acquireLease({
+    resource: 'task:shared-job',
+    owner: 'other-agent',
+    ttlMs: 30_000,
+    leasesDir: tempLeases,
+    now,
+  });
+  assert.equal(held.acquired, true);
+
+  let ran = false;
+  const scheduler = new BackgroundScheduler({
+    workspaceRoot: WORKSPACE_ROOT,
+    runsDir: tempRunsDir,
+    journalPath: tempJournal,
+    leasesDir: tempLeases,
+    ownerId: 'scheduler-test',
+  });
+  scheduler.registerHandler('custom', () => {
+    ran = true;
+    return { ok: true };
+  });
+
+  try {
+    const res = await scheduler.dispatchTask(
+      { id: 'shared-job', action: 'custom', cron: '* * * * *' },
+      now,
+    );
+    assert.equal(ran, false);
+    assert.equal(res.outcome.ok, false);
+    assert.equal(res.outcome.skipped, true);
+    assert.equal(res.outcome.reason, 'lease_conflict');
+
+    const entries = readJournalEntries({ journalPath: tempJournal });
+    assert.equal(entries.length, 1);
+    assert.equal(entries[0].payload.skipped, true);
+    assert.match(entries[0].payload.config_hash, /^[0-9a-f]{64}$/);
+  } finally {
+    releaseLease({
+      resource: 'task:shared-job',
+      owner: 'other-agent',
+      leaseId: held.lease.leaseId,
+      leasesDir: tempLeases,
+    });
+    fs.rmSync(tempRunsDir, { recursive: true, force: true });
+  }
 });
 
 test('BackgroundScheduler: starts and stops timer gracefully', () => {

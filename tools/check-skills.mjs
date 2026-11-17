@@ -61,6 +61,16 @@ export const VENDORED_SKILLS = Object.freeze([
     provenance: "rook's rig",
     sha256: '535de280ba4fc72241aa5e880f49a628df9deca6e94329b7d01ec273870f7208',
   },
+  {
+    name: 'rook-clock',
+    provenance: 's04e01 artifact (clock)',
+    sha256: '361265aa7e14e31bfeb28b49ad2c671b2b67fbadd4d73f311b45538c03124a4b',
+  },
+  {
+    name: 'rook-plane',
+    provenance: 's04e02 artifact (plane)',
+    sha256: '3420dc984154dcaf2a3b53e1cadad546396e7c7bd86f5efccc70b332b5ae478d',
+  },
 ]);
 
 const DESC_RULES = [

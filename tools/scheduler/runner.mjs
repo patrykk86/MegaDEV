@@ -17,8 +17,10 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { maskSecretValue } from '../hub-client.mjs';
 import { MARKS, sweep } from '../friction-log.mjs';
+import { appendJournalEntry, computeConfigHash } from '../journal.mjs';
 import { enforceRuleBudget, loadProjectMemoryRules } from '../memory/rule-budget.mjs';
 import { executeNightlyAudit } from '../nightly-audit.mjs';
+import { acquireLease, releaseLease } from '../resource-lease.mjs';
 import { redactOutbound } from '../sanitize.mjs';
 
 const THIS_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -279,6 +281,12 @@ export class BackgroundScheduler {
     this.configPath =
       options.configPath || path.join(this.workspaceRoot, 'tools', 'scheduler', 'schedule.yaml');
     this.runsDir = options.runsDir || path.join(this.workspaceRoot, '.runs', 'scheduler');
+    this.journalPath =
+      options.journalPath || path.join(this.workspaceRoot, '.runs', 'journal.jsonl');
+    this.leasesDir =
+      options.leasesDir || path.join(this.workspaceRoot, '.runs', 'leases');
+    this.leaseTtlMs = options.leaseTtlMs ?? 60_000;
+    this.ownerId = options.ownerId || `scheduler:${process.pid}`;
     this.handlers = new Map();
     this.alertListeners = [];
     this.dispatcher = options.dispatcher || null;
@@ -339,40 +347,92 @@ export class BackgroundScheduler {
   async dispatchTask(task, now = new Date()) {
     const handler = this.handlers.get(task.action);
     const startMs = Date.now();
-    let outcome = null;
+    const configHash = computeConfigHash(this.workspaceRoot);
+    const resource = task.resource || `task:${task.id}`;
+    const leaseRes = acquireLease({
+      resource,
+      owner: this.ownerId,
+      ttlMs: this.leaseTtlMs,
+      leasesDir: this.leasesDir,
+      now,
+    });
 
-    try {
-      if (!handler) {
-        throw new Error(`No registered handler for action: ${task.action}`);
-      }
-      const res = await handler(this.workspaceRoot);
-      outcome = {
-        ok: res?.ok !== false,
-        durationMs: Date.now() - startMs,
-        details: res,
-      };
-    } catch (err) {
+    let outcome = null;
+    if (!leaseRes.acquired) {
       outcome = {
         ok: false,
-        durationMs: Date.now() - startMs,
-        error: redactOutbound(err.message),
+        skipped: true,
+        reason: 'lease_conflict',
+        durationMs: 0,
+        error: `Resource '${resource}' is currently leased by '${leaseRes.conflict?.owner ?? 'unknown'}'`,
       };
+    } else {
+      try {
+        if (!handler) {
+          throw new Error(`No registered handler for action: ${task.action}`);
+        }
+        const res = await handler(this.workspaceRoot);
+        outcome = {
+          ok: res?.ok !== false,
+          durationMs: Date.now() - startMs,
+          details: res,
+        };
+      } catch (err) {
+        outcome = {
+          ok: false,
+          durationMs: Date.now() - startMs,
+          error: redactOutbound(err.message),
+        };
+      } finally {
+        releaseLease({
+          resource,
+          owner: this.ownerId,
+          leaseId: leaseRes.lease.leaseId,
+          leasesDir: this.leasesDir,
+        });
+      }
     }
 
     const record = {
       taskId: task.id,
       action: task.action,
       cron: task.cron,
+      configHash,
+      resource,
       timestamp: now.toISOString(),
       outcome,
     };
 
     this.recordDispatch(record);
+    try {
+      appendJournalEntry(
+        {
+          actor_id: this.ownerId,
+          action_type: 'scheduler_run',
+          timestamp: now.toISOString(),
+          summary: `${task.id} (${task.action}): ${outcome.ok ? 'OK' : outcome.reason || 'FAIL'}`,
+          config_hash: configHash,
+          duration_ms: outcome.durationMs,
+          payload: {
+            task_id: task.id,
+            action: task.action,
+            resource,
+            ok: outcome.ok,
+            skipped: Boolean(outcome.skipped),
+            reason: outcome.reason ?? null,
+          },
+        },
+        { journalPath: this.journalPath },
+      );
+    } catch {
+      // Do not fail scheduler dispatch if journal append fails
+    }
 
     this.emitAlert({
       type: 'scheduler_dispatch',
       taskId: task.id,
       ok: outcome.ok,
+      configHash,
       message: outcome.error || outcome.details?.message || `Task ${task.id} executed`,
       timestamp: now.toISOString(),
     });

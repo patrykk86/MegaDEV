@@ -80,3 +80,4 @@ desktop.ini
 *.bak
 *.orig
 
+.vscode/mcp.json
