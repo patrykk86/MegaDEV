@@ -71,6 +71,16 @@ export const VENDORED_SKILLS = Object.freeze([
     provenance: 's04e02 artifact (plane)',
     sha256: '3420dc984154dcaf2a3b53e1cadad546396e7c7bd86f5efccc70b332b5ae478d',
   },
+  {
+    name: 'read',
+    provenance: 's01e01 artifact (read, 6caf82dec62f)',
+    sha256: '515592cf664febf40070e41dd727aa6cd4d3387e76d9a736d8577ff9e8f417c7',
+  },
+  {
+    name: 'hands',
+    provenance: 's02e03 artifact (hands, 1451720afc1f)',
+    sha256: '6c88e01df1269dcfe0542dd4e105e40ae5ae9c1e02667d810623a8f15fa72fc6',
+  },
 ]);
 
 const DESC_RULES = [

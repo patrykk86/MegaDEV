@@ -1,7 +1,7 @@
 # Skills knowledge — which procedure to reach for
 
-A skill is a procedure; `AGENTS.md` holds the hard rules and a tool's `.tool.json` its contract. Seventeen
-skills ship here, six of them vendored packs. `node tools/check-skills.mjs` validates every manifest.
+A skill is a procedure; `AGENTS.md` holds the hard rules and a tool's `.tool.json` its contract. Twenty
+skills ship here, eight of them vendored packs. `node tools/check-skills.mjs` validates every manifest.
 
 | Skill | Reaches for it when | Tool |
 | :--- | :--- | :--- |
@@ -10,10 +10,13 @@ skills ship here, six of them vendored packs. `node tools/check-skills.mjs` vali
 | `brief` | before a change starts: intent, done, one proof per criterion | `tools/brief.mjs` |
 | `client-handoff` | a freelance deliverable is packaged and audited | `tools/client-handoff.mjs` |
 | `crew` | work goes to subagents, cloud harnesses, and comes back with receipts | - |
+| `decide` | post-release signals become grouped decisions with cited IDs and bug-vs-owner splits | `tools/transcribe.mjs` |
+| `hands` | building, wrapping, or changing a tool an agent calls (`TOOL.md` contract first) | `scripts/check-tool.mjs` |
 | `host-desk` | running payout batches or reviewing co-host diffs against house notes | `roles/payout-runner/run.mjs`, `roles/reviewer/run.mjs` |
 | `keep` | a finding must outlast the session or travel to a person | `tools/journal.mjs` |
 | `knowledge` | a knowledge base, note vault or wiki needs contracts | `tools/kb-check.mjs` |
 | `multi-source-worker` | several recordings or logs on different clocks | `tools/transcribe.mjs` |
+| `read` | before sending an API/form body, shortening a person's text, or naming the newest model | `scripts/find-contract.mjs`, `scripts/cut-diff.mjs` |
 | `rig` | a repo is being set up for agent work | `tools/check.mjs` |
 | `rook-clock` | running a background job inside time, egress, and parked-owner limits | `scripts/run-job.mjs` |
 | `rook-loop` | the answer is in an earlier session, or a loop needs a reviewer | `tools/memory/contextual-recall.mjs` |
@@ -24,5 +27,5 @@ skills ship here, six of them vendored packs. `node tools/check-skills.mjs` vali
 
 - **A skill names its tool and its contract**: `metadata.tools` and `metadata.schema` must resolve inside the repository, a skill shipping `scripts/` declares one, and `node tools/skill-links.test.mjs` is the health test that proves it — no gate reads those paths. source: `AGENTS.md` §3 · how: ran
 - **A new skill goes through `skill-shaper`**: the description stays inside the 512-char target, and `checkSkillOverlap` fails a trigger that duplicates an existing one, so two skills never compete for the same request. source: `tools/check-skills.mjs` · how: ran
-- **Vendored packs are replaced, never edited**: `rig`, `keep`, `prove`, `rook-loop`, `rook-clock`, and `rook-plane` arrive from outside and sit in `VENDORED_SKILLS`, outside the gate's fold; an update replaces the pack byte for byte. source: `tools/check.mjs`, `tools/check-skills.mjs` · how: read
+- **Vendored packs are replaced, never edited**: `rig`, `keep`, `prove`, `rook-loop`, `rook-clock`, `rook-plane`, `read`, and `hands` arrive from outside and sit in `VENDORED_SKILLS`, outside the gate's fold; an update replaces the pack byte for byte. source: `tools/check.mjs`, `tools/check-skills.mjs` · how: read
 - **A skill is not a place for a hard rule**: a rule that must bind every session belongs in `AGENTS.md` or a memory subject, because a skill loads only when its trigger fires. source: `AGENTS.md` §1, §3 · how: read
