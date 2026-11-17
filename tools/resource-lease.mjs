@@ -32,11 +32,35 @@ function readLeaseFile(leasePath) {
 }
 
 function isLeaseExpired(lease, nowMs) {
-  if (!lease || !lease.expiresAt) {
+  if (!lease?.expiresAt) {
     return true;
   }
   const expiresMs = new Date(lease.expiresAt).getTime();
   return Number.isNaN(expiresMs) || expiresMs <= nowMs;
+}
+
+function tryCreateLeaseFile(leasePath, lease, nowMs) {
+  try {
+    fs.writeFileSync(leasePath, `${JSON.stringify(lease, null, 2)}\n`, {
+      encoding: 'utf8',
+      flag: 'wx',
+    });
+    return { acquired: true, lease, leasePath };
+  } catch (err) {
+    if (err?.code !== 'EEXIST') {
+      throw err;
+    }
+    const existing = readLeaseFile(leasePath);
+    if (existing && !isLeaseExpired(existing, nowMs)) {
+      return { acquired: false, conflict: existing, leasePath };
+    }
+    try {
+      fs.unlinkSync(leasePath);
+    } catch {
+      // Another contender may have already unlinked/reclaimed it.
+    }
+    return null;
+  }
 }
 
 /**
@@ -70,26 +94,9 @@ export function acquireLease(opts) {
   };
 
   for (let attempt = 0; attempt < 2; attempt++) {
-    try {
-      fs.writeFileSync(leasePath, `${JSON.stringify(lease, null, 2)}\n`, {
-        encoding: 'utf8',
-        flag: 'wx',
-      });
-      return { acquired: true, lease, leasePath };
-    } catch (err) {
-      if (err?.code !== 'EEXIST') {
-        throw err;
-      }
-      const existing = readLeaseFile(leasePath);
-      if (existing && !isLeaseExpired(existing, nowMs)) {
-        return { acquired: false, conflict: existing, leasePath };
-      }
-      // Expired or corrupt lease: remove and retry atomic creation once.
-      try {
-        fs.unlinkSync(leasePath);
-      } catch {
-        // Another contender may have already unlinked/reclaimed it.
-      }
+    const result = tryCreateLeaseFile(leasePath, lease, nowMs);
+    if (result) {
+      return result;
     }
   }
 

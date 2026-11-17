@@ -254,8 +254,9 @@ export function validateSkill(skillDir, problems) {
     return;
   }
   const { fm, body } = parsed;
+  const vendored = vendoredEntryFor(skillDir, file);
   checkName(fm.name, path.basename(skillDir), rel, problems);
-  checkDescription(fm.description, rel, problems, vendoredEntryFor(skillDir, file));
+  checkDescription(fm.description, rel, problems, vendored);
   checkBody(body, rel, skillDir, problems);
 
   for (const k of Object.keys(fm)) {
@@ -263,7 +264,7 @@ export function validateSkill(skillDir, problems) {
       problems.push(`${rel}: unknown frontmatter key "${k}" (portability)`);
     }
   }
-  if (fm.metadata?.version && !SEMVER_RE.test(fm.metadata.version)) {
+  if (!vendored && fm.metadata?.version && !SEMVER_RE.test(fm.metadata.version)) {
     problems.push(`${rel}: metadata.version "${fm.metadata.version}" not semver`);
   }
 }

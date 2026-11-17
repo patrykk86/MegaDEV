@@ -60,22 +60,44 @@ function exportsOf(source) {
   return [...found].sort();
 }
 
+function listModulePaths(dir, prefix = '') {
+  const results = [];
+  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) {
+      results.push(...listModulePaths(path.join(dir, entry.name), `${prefix}${entry.name}/`));
+    } else if (entry.name.endsWith('.mjs') && !entry.name.endsWith('.test.mjs')) {
+      results.push(`${prefix}${entry.name}`);
+    }
+  }
+  return results.sort();
+}
+
+function resolveSchemaPath(toolsDir, relModule) {
+  const stem = relModule.replace(/\.mjs$/, '');
+  const local = `${stem}.tool.json`;
+  if (fs.existsSync(path.join(toolsDir, local))) {
+    return `tools/${local}`;
+  }
+  const base = `${path.basename(stem)}.tool.json`;
+  if (fs.existsSync(path.join(toolsDir, base))) {
+    return `tools/${base}`;
+  }
+  return null;
+}
+
 function moduleRows(root) {
   const dir = path.join(root, 'tools');
-  const files = fs
-    .readdirSync(dir)
-    .filter((name) => name.endsWith('.mjs') && !name.endsWith('.test.mjs'))
-    .sort();
-  return files.map((name) => {
-    const source = fs.readFileSync(path.join(dir, name), 'utf-8');
+  const files = listModulePaths(dir);
+  return files.map((relName) => {
+    const source = fs.readFileSync(path.join(dir, relName), 'utf-8');
     const lines = docLines(source);
-    const stem = name.replace(/\.mjs$/, '');
+    const stem = relName.replace(/\.mjs$/, '');
     return {
-      rel: `tools/${name}`,
+      rel: `tools/${relName}`,
       purpose: purpose(lines) || '(no docblock)',
       imports: localImports(source),
       exports: exportsOf(source),
-      schema: fs.existsSync(path.join(dir, `${stem}.tool.json`)) ? `tools/${stem}.tool.json` : null,
+      schema: resolveSchemaPath(dir, relName),
       test: fs.existsSync(path.join(dir, `${stem}.test.mjs`)) ? `tools/${stem}.test.mjs` : null,
       hash: sha256(source),
     };

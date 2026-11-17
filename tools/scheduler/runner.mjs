@@ -344,66 +344,36 @@ export class BackgroundScheduler {
     fs.appendFileSync(logPath, `${JSON.stringify(safeRecord)}\n`, 'utf8');
   }
 
-  async dispatchTask(task, now = new Date()) {
+  async executeWithLease(task, resource, leaseRes) {
     const handler = this.handlers.get(task.action);
     const startMs = Date.now();
-    const configHash = computeConfigHash(this.workspaceRoot);
-    const resource = task.resource || `task:${task.id}`;
-    const leaseRes = acquireLease({
-      resource,
-      owner: this.ownerId,
-      ttlMs: this.leaseTtlMs,
-      leasesDir: this.leasesDir,
-      now,
-    });
-
-    let outcome = null;
-    if (!leaseRes.acquired) {
-      outcome = {
-        ok: false,
-        skipped: true,
-        reason: 'lease_conflict',
-        durationMs: 0,
-        error: `Resource '${resource}' is currently leased by '${leaseRes.conflict?.owner ?? 'unknown'}'`,
-      };
-    } else {
-      try {
-        if (!handler) {
-          throw new Error(`No registered handler for action: ${task.action}`);
-        }
-        const res = await handler(this.workspaceRoot);
-        outcome = {
-          ok: res?.ok !== false,
-          durationMs: Date.now() - startMs,
-          details: res,
-        };
-      } catch (err) {
-        outcome = {
-          ok: false,
-          durationMs: Date.now() - startMs,
-          error: redactOutbound(err.message),
-        };
-      } finally {
-        releaseLease({
-          resource,
-          owner: this.ownerId,
-          leaseId: leaseRes.lease.leaseId,
-          leasesDir: this.leasesDir,
-        });
+    try {
+      if (!handler) {
+        throw new Error(`No registered handler for action: ${task.action}`);
       }
+      const res = await handler(this.workspaceRoot);
+      return {
+        ok: res?.ok !== false,
+        durationMs: Date.now() - startMs,
+        details: res,
+      };
+    } catch (err) {
+      return {
+        ok: false,
+        durationMs: Date.now() - startMs,
+        error: redactOutbound(err.message),
+      };
+    } finally {
+      releaseLease({
+        resource,
+        owner: this.ownerId,
+        leaseId: leaseRes.lease.leaseId,
+        leasesDir: this.leasesDir,
+      });
     }
+  }
 
-    const record = {
-      taskId: task.id,
-      action: task.action,
-      cron: task.cron,
-      configHash,
-      resource,
-      timestamp: now.toISOString(),
-      outcome,
-    };
-
-    this.recordDispatch(record);
+  logDispatchToJournal(task, resource, configHash, outcome, now) {
     try {
       appendJournalEntry(
         {
@@ -427,6 +397,41 @@ export class BackgroundScheduler {
     } catch {
       // Do not fail scheduler dispatch if journal append fails
     }
+  }
+
+  async dispatchTask(task, now = new Date()) {
+    const configHash = computeConfigHash(this.workspaceRoot);
+    const resource = task.resource || `task:${task.id}`;
+    const leaseRes = acquireLease({
+      resource,
+      owner: this.ownerId,
+      ttlMs: this.leaseTtlMs,
+      leasesDir: this.leasesDir,
+      now,
+    });
+
+    const outcome = leaseRes.acquired
+      ? await this.executeWithLease(task, resource, leaseRes)
+      : {
+          ok: false,
+          skipped: true,
+          reason: 'lease_conflict',
+          durationMs: 0,
+          error: `Resource '${resource}' is currently leased by '${leaseRes.conflict?.owner ?? 'unknown'}'`,
+        };
+
+    const record = {
+      taskId: task.id,
+      action: task.action,
+      cron: task.cron,
+      configHash,
+      resource,
+      timestamp: now.toISOString(),
+      outcome,
+    };
+
+    this.recordDispatch(record);
+    this.logDispatchToJournal(task, resource, configHash, outcome, now);
 
     this.emitAlert({
       type: 'scheduler_dispatch',

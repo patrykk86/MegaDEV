@@ -1,6 +1,9 @@
 #!/usr/bin/env node
-// tools/system-diff-build.mjs
-// Builds and validates self-contained HTML decision reports adhering to .agents/skills/system-diff
+/**
+ * tools/system-diff-build.mjs - Self-contained HTML decision report builder for PR/commit ranges
+ *
+ * Builds and validates self-contained HTML decision reports adhering to .agents/skills/system-diff.
+ */
 
 import { execFileSync } from 'node:child_process';
 import path from 'node:path';

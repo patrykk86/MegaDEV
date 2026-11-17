@@ -182,6 +182,22 @@ function verifySingleLine(lineStr, idx, expectedPrevHash, lastTimestamp, errors)
   }
 }
 
+function buildJournalPayload(entryInput, options) {
+  const raw = { ...(entryInput.payload ?? {}) };
+  if (entryInput.duration_ms !== undefined && raw.duration_ms === undefined) {
+    raw.duration_ms = Number(entryInput.duration_ms);
+  }
+  if (entryInput.tokens_used !== undefined && raw.tokens_used === undefined) {
+    raw.tokens_used = Number(entryInput.tokens_used);
+  }
+  if (entryInput.config_hash !== undefined && raw.config_hash === undefined) {
+    raw.config_hash = String(entryInput.config_hash);
+  } else if (options.includeConfigHash === true && raw.config_hash === undefined) {
+    raw.config_hash = computeConfigHash(options.workspaceRoot ?? ROOT);
+  }
+  return JSON.parse(redactOutbound(JSON.stringify(raw)));
+}
+
 /**
  * Appends a new entry strictly enforcing non-destructive invariant and SHA-256 hash chaining.
  */
@@ -208,19 +224,7 @@ export function appendJournalEntry(entryInput, options = {}) {
 
   // Recursively sanitize and redact outbound summary and payload to prevent at-rest secret/PHI leaks
   const cleanSummary = redactOutbound(String(entryInput.summary ?? ''));
-  const rawPayload = { ...(entryInput.payload ?? {}) };
-  if (entryInput.duration_ms !== undefined && rawPayload.duration_ms === undefined) {
-    rawPayload.duration_ms = Number(entryInput.duration_ms);
-  }
-  if (entryInput.tokens_used !== undefined && rawPayload.tokens_used === undefined) {
-    rawPayload.tokens_used = Number(entryInput.tokens_used);
-  }
-  if (entryInput.config_hash !== undefined && rawPayload.config_hash === undefined) {
-    rawPayload.config_hash = String(entryInput.config_hash);
-  } else if (options.includeConfigHash === true && rawPayload.config_hash === undefined) {
-    rawPayload.config_hash = computeConfigHash(options.workspaceRoot ?? ROOT);
-  }
-  const cleanPayload = JSON.parse(redactOutbound(JSON.stringify(rawPayload)));
+  const cleanPayload = buildJournalPayload(entryInput, options);
 
   const entry = {
     entry_id: entryInput.entry_id ?? crypto.randomUUID(),
