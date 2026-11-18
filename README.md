@@ -107,7 +107,7 @@ MegaDEV employs specialized models routed via the local **Worker Bridge** MCP se
 
 ### Quota Failover Chain
 When OpenRouter returns HTTP `429` (Rate Limit) or `402` (Payment Required), the bridge automatically preserves the system prompt and transitions along the fallback chain:
-$$\text{DeepSeek Flash} \longrightarrow \text{GPT-6 Luna} \longrightarrow \text{Claude Haiku} \longrightarrow \text{Gemini Argon}$$
+$$\text{Gemini Flash-Lite} \longrightarrow \text{GPT-6 Luna} \longrightarrow \text{Claude Haiku} \longrightarrow \text{Gemini Argon}$$
 
 ---
 
