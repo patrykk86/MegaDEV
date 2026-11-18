@@ -1,0 +1,21 @@
+name: Domain Agent scenarios
+on:
+  pull_request:
+    paths:
+      - "agents/**"
+      - "tools/domain-agents.mjs"
+
+jobs:
+  scenarios:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Validate Domain Agents structure and receipts
+        run: node tools/domain-agents.mjs --validate
+      - name: Run Domain Agent scenario checks
+        run: node tools/domain-agents.mjs --scenarios
+      - name: Run Domain Agent unit tests
+        run: node --test tools/domain-agents.test.mjs

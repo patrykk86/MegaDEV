@@ -9,6 +9,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { verifyMap } from './codebase-map.mjs';
 import { checkSkillOverlap, validateSkill } from './check-skills.mjs';
+import { validateDomainAgents } from './domain-agents.mjs';
 import { validateSupportKb } from './kb-check.mjs';
 import { inspectMemoryLayout } from './memory/rule-budget.mjs';
 import { aggregateHandoffs, validateHandoffObject } from './transcribe.mjs';
@@ -347,6 +348,13 @@ function checkMemoryTree(problems) {
   }
 }
 
+function checkDomainAgents(problems) {
+  const res = validateDomainAgents();
+  if (!res.ok) {
+    problems.push(...res.problems);
+  }
+}
+
 function main() {
   const problems = [];
   checkCanonicalTools(problems);
@@ -360,6 +368,7 @@ function main() {
   checkCodebaseMap(problems);
   checkDocBudgets(problems);
   checkMemoryTree(problems);
+  checkDomainAgents(problems);
   checkMegaExamples(problems);
 
   if (problems.length > 0) {

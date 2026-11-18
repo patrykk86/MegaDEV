@@ -1,0 +1,32 @@
+{
+  "name": "domain_agents",
+  "description": "Domain Agents registry, path-router hook, parallel read-only consultation, and scenario check runner (S04E03).",
+  "entrypoint": "tools/domain-agents.mjs",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "validate": {
+        "type": "boolean",
+        "description": "Validate all agents/<name>/ folders (agent.md, memories.md receipts, glossary.md, scenarios.md)."
+      },
+      "scenarios": {
+        "type": "boolean",
+        "description": "Run scenario checks for one or all Domain Agents."
+      },
+      "agent": {
+        "type": "string",
+        "description": "Optional single Domain Agent name when running scenarios."
+      },
+      "paths": {
+        "type": "array",
+        "items": { "type": "string" },
+        "description": "File paths to match against Domain Agent owns: globs for parallel consultation."
+      },
+      "live": {
+        "type": "boolean",
+        "description": "Use live OpenRouter model calls (requires OPENROUTER_API_KEY) instead of deterministic local matching."
+      }
+    },
+    "additionalProperties": false
+  }
+}
