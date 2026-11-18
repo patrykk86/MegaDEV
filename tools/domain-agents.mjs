@@ -10,7 +10,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { DEFAULT_ROUTER_CONFIG } from './agent-loop.mjs';
+import { DEFAULT_ROUTER_CONFIG, loadLimitsDoc } from './agent-loop.mjs';
 import { resolveLimits } from './model-limits.mjs';
 
 const THIS_DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -24,6 +24,7 @@ const STOP_WORDS = new Set([
   'this', 'that', 'with', 'from', 'does', 'not', 'touch', 'into', 'want', 'local', 'file', 'files',
   'name', 'helper', 'unrelated', 'change', 'changes', 'fixing', 'typo', 'rename', 'variable',
   'comment', 'formatting', 'what', 'happens', 'instead', 'directly', 'using', 'allows', 'without',
+  'exceeds', 'fails', 'breaks', 'routes', 'blocks', 'says', 'never',
 ]);
 
 function applyFrontmatterLine(line, frontmatter, activeArrayKey) {
@@ -130,10 +131,12 @@ export function globToRegExp(glob) {
     .replace(/^\.\//, '');
   const escaped = norm.replace(/[\\^$.|+()[\]{}]/g, '\\$&');
   const pattern = escaped
-    .replace(/\*\*\//g, '(?:.+/)?')
-    .replace(/\*\*/g, '.*')
+    .replace(/\*\*\//g, '__GLOBSTAR_DIR__')
+    .replace(/\*\*/g, '__GLOBSTAR__')
     .replace(/\*/g, '[^/]*')
-    .replace(/\?/g, '[^/]');
+    .replace(/\?/g, '[^/]')
+    .replace(/__GLOBSTAR_DIR__/g, '(?:.+/)?')
+    .replace(/__GLOBSTAR__/g, '.*');
   return new RegExp(`^${pattern}$`);
 }
 
@@ -310,12 +313,15 @@ export function buildDeterministicBrief(agent, { filePath = '', query = '' } = {
  * Calls OpenRouter headless on the Domain Agent's small, fast model with limits from
  * `tools/model-limits.json` (respecting tools/agent-guard.mjs).
  */
-async function callDomainModelLive(agent, promptText) {
+export async function callDomainModelLive(agent, promptText, { fetchFn = globalThis.fetch, limitsDoc = null } = {}) {
   const apiKey = process.env.OPENROUTER_API_KEY;
   if (!apiKey) {
     throw new Error('OPENROUTER_API_KEY is required for live Domain Agent calls.');
   }
-  const limits = resolveLimits(agent.model);
+  const doc = limitsDoc ?? loadLimitsDoc();
+  const { limits } = resolveLimits(doc, agent.model);
+  const maxTokens = Math.min(Number(limits?.maxOutputTokens) || 477, 600);
+  const timeoutMs = Number(limits?.timeoutMs) || 5303;
   const systemPrompt = [
     agent.job,
     '',
@@ -326,7 +332,7 @@ async function callDomainModelLive(agent, promptText) {
     agent.memoriesRaw || '(none)',
   ].join('\n');
 
-  const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+  const res = await fetchFn('https://openrouter.ai/api/v1/chat/completions', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -334,13 +340,13 @@ async function callDomainModelLive(agent, promptText) {
     },
     body: JSON.stringify({
       model: agent.model,
-      max_tokens: Math.min(limits.maxOutputTokens, 600),
+      max_tokens: maxTokens,
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: promptText },
       ],
     }),
-    signal: AbortSignal.timeout(limits.timeoutMs),
+    signal: AbortSignal.timeout(timeoutMs),
   });
 
   if (!res.ok) {
@@ -414,10 +420,19 @@ export async function consultDomainAgents({
   );
 }
 
-function collectUnseenPaths(paths, agents, seen, workspaceRoot) {
-  return paths.filter((p) =>
-    matchPathToDomains(p, agents, workspaceRoot).some((a) => !seen.has(a.name)),
-  );
+function claimUnseenPaths(paths, agents, seen, workspaceRoot) {
+  const neededPaths = [];
+  for (const p of paths) {
+    const matched = matchPathToDomains(p, agents, workspaceRoot);
+    const unseen = matched.filter((a) => !seen.has(a.name));
+    if (unseen.length > 0) {
+      for (const a of unseen) {
+        seen.add(a.name);
+      }
+      neededPaths.push(p);
+    }
+  }
+  return neededPaths;
 }
 
 function injectDomainBriefs(state, call, consults, seen) {
@@ -464,7 +479,7 @@ export function createDomainAgentHook({
     const seen = briefedByTask.get(activeTask);
     const paths = extractPathsFromToolCall(call, workspaceRoot);
     const agents = paths.length > 0 ? loadDomainAgents(agentsDir) : [];
-    const neededPaths = collectUnseenPaths(paths, agents, seen, workspaceRoot);
+    const neededPaths = claimUnseenPaths(paths, agents, seen, workspaceRoot);
     if (neededPaths.length === 0) {
       return {};
     }
@@ -493,10 +508,12 @@ export function evaluateScenarioAnswer(scenario, answer) {
     String(phrase ?? '')
       .toLowerCase()
       .split(/[^a-z0-9_.-]+/)
-      .filter((w) => w.length >= 4 && !['that', 'with', 'from', 'this', 'into', 'without', 'says'].includes(w));
+      .filter((w) => w.length >= 4 && !STOP_WORDS.has(w));
 
   const expectWords = extractKeywords(scenario.expect);
-  const matchedExpect = expectWords.length === 0 || expectWords.some((w) => text.includes(w));
+  const minRequired = expectWords.length <= 2 ? expectWords.length : 2;
+  const hitCount = expectWords.filter((w) => text.includes(w)).length;
+  const matchedExpect = expectWords.length === 0 || hitCount >= minRequired;
 
   const neverPhrases = String(scenario.never ?? '')
     .toLowerCase()
@@ -521,11 +538,11 @@ async function resolveScenarioAnswer(agent, scenario, { askFn, live }) {
   if (live) {
     return callDomainModelLive(agent, scenario.ask);
   }
-  const det = buildDeterministicBrief(agent, { query: scenario.ask });
+  const det = buildDeterministicBrief(agent, { query: `${scenario.title} ${scenario.ask}` });
   if (!det.relevant) {
     return 'nothing relevant';
   }
-  return `${det.brief}\n${agent.glossaryRaw}\n${agent.memoriesRaw}`.trim();
+  return det.brief.trim();
 }
 
 /**

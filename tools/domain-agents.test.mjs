@@ -6,9 +6,11 @@ import test from 'node:test';
 import { runAgent } from './agent-loop.mjs';
 import {
   DEFAULT_AGENTS_DIR,
+  callDomainModelLive,
   consultDomainAgents,
   createDomainAgentHook,
   extractPathsFromToolCall,
+  globToRegExp,
   loadDomainAgents,
   matchPathToDomains,
   runScenarioChecks,
@@ -34,6 +36,14 @@ test('matchPathToDomains and extractPathsFromToolCall match owned globs includin
     memMatches.map((a) => a.name),
     ['memory-journal'],
   );
+
+  // Nested subdirectories under tools/memory/** must also match
+  const nestedMatches = matchPathToDomains('tools/memory/nested/sub/check.mjs', agents);
+  assert.deepEqual(
+    nestedMatches.map((a) => a.name),
+    ['memory-journal'],
+  );
+  assert.equal(globToRegExp('tools/memory/**').test('tools/memory/a/b/c.mjs'), true);
 
   const extracted = extractPathsFromToolCall({
     name: 'run_shell',
@@ -129,5 +139,85 @@ test('runScenarioChecks passes for workspace agents and fails if a key rule is r
     assert.equal(failReport.ok, false, 'Scenario check must fail when critical domain rules are watered down');
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test('createDomainAgentHook deduplicates concurrent parallel read-only tool calls in one step', async () => {
+  const consultCalls = [];
+  const beforeTool = createDomainAgentHook({
+    agentsDir: DEFAULT_AGENTS_DIR,
+    consultFn: async (agent, ctx) => {
+      await new Promise((r) => setTimeout(r, 15));
+      consultCalls.push({ domain: agent.name, matchedPaths: ctx.matchedPaths });
+      return `- Watch out for ${agent.name} invariant [commit 8c64208]`;
+    },
+  });
+
+  let step = 0;
+  const llm = {
+    async generate() {
+      step += 1;
+      if (step === 1) {
+        return {
+          finishReason: 'tool_calls',
+          toolCalls: [
+            { id: '1', name: 'read_file', arguments: { path: 'tools/agent-loop.mjs' } },
+            { id: '2', name: 'read_file', arguments: { path: 'tools/agent-guard.mjs' } },
+          ],
+        };
+      }
+      return { finishReason: 'stop', text: 'done' };
+    },
+  };
+
+  const out = await runAgent({
+    model: 'deepseek/deepseek-v4.1-flash-20260910',
+    llm,
+    query: 'Parallel read of two files in the same domain',
+    tools: {
+      read_file: ({ path: p }) => `contents of ${p}`,
+    },
+    readOnlyTools: ['read_file'],
+    hooks: { beforeTool },
+  });
+
+  assert.equal(out.end, 'answer');
+  assert.equal(consultCalls.length, 1, 'Concurrent tool calls in the same domain must trigger only one consultation');
+});
+
+test('callDomainModelLive resolves model limits from loadLimitsDoc() properly', async () => {
+  const agents = loadDomainAgents(DEFAULT_AGENTS_DIR);
+  const loopAgent = agents.find((a) => a.name === 'agent-loop');
+  assert.ok(loopAgent);
+
+  let capturedBody = null;
+  let capturedSignal = null;
+  const prevKey = process.env.OPENROUTER_API_KEY;
+  process.env.OPENROUTER_API_KEY = 'test-key-for-unit-test';
+  try {
+    const reply = await callDomainModelLive(loopAgent, 'Check beforeTool hook', {
+      fetchFn: async (_url, init) => {
+        capturedBody = JSON.parse(init.body);
+        capturedSignal = init.signal;
+        return {
+          ok: true,
+          status: 200,
+          async json() {
+            return { choices: [{ message: { content: '- Re-check with guardToolCall [commit 8c64208]' } }] };
+          },
+        };
+      },
+    });
+    assert.ok(reply.includes('guardToolCall'));
+    assert.equal(capturedBody.model, loopAgent.model);
+    assert.equal(typeof capturedBody.max_tokens, 'number');
+    assert.ok(Number.isFinite(capturedBody.max_tokens) && capturedBody.max_tokens > 0);
+    assert.ok(capturedSignal instanceof AbortSignal);
+  } finally {
+    if (prevKey === undefined) {
+      delete process.env.OPENROUTER_API_KEY;
+    } else {
+      process.env.OPENROUTER_API_KEY = prevKey;
+    }
   }
 });

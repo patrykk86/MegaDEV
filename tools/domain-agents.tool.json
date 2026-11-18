@@ -1,7 +1,13 @@
 {
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "name": "domain_agents",
   "description": "Domain Agents registry, path-router hook, parallel read-only consultation, and scenario check runner (S04E03).",
-  "entrypoint": "tools/domain-agents.mjs",
+  "metadata": {
+    "runtime": "node",
+    "script": "tools/domain-agents.mjs",
+    "skill": null,
+    "standaloneReason": "Canonical path-router hook and scenario runner for agents/<name>/ folders; wired directly into tools/check.mjs and runAgent beforeTool hooks without a separate skill wrapper."
+  },
   "parameters": {
     "type": "object",
     "properties": {
