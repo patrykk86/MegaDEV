@@ -32,7 +32,7 @@ those "new" problems, it says, are ones engineers have always had.
 - **Evaluation** is the strongest: `AGENTS.md` §2 blast-radius tiers, `tools/eval-agent-primitives.mjs`,
   `tools/eval-agents-capabilities.mjs`, `tools/eval-skill.mjs`, `tools/model-limits.json`.
 - **Decomposition for delegation**: `.agents/skills/crew/SKILL.md` (five blocks per brief, a receipt on
-  the way home), `tools/scheduler/runner.mjs`, `tools/gateway/task-bridge.mjs`.
+  the way home) and `tools/scheduler/runner.mjs`.
 - **Contracts as specs**: every `tools/*.tool.json`, and `hub-client.mjs` behind `hub-client.tool.json`.
 - **Disagreements routed to an owner**: `s03e01/owner-questions.md` and the `owner-questions` skill.
 - **Evidence on disk**: `.runs/`, `.runs/journal.jsonl` with hash chaining, `s0Xe0Y/requests.log`.

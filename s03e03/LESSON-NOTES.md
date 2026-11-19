@@ -32,7 +32,7 @@ move.
 
 - **Planning**: `tools/brief.mjs` and the `brief` skill (five blocks, one proof per criterion,
   boundaries), `triage` for arriving requests, and `.agents/rules/challenge_playbook.md` per episode.
-- **Execution**: `crew`, `tools/scheduler/runner.mjs`, `tools/gateway/task-bridge.mjs`, results on disk
+- **Execution**: `crew` and `tools/scheduler/runner.mjs`, with results on disk
   at `.runs/<job>/result.json`, and `AGENTS.md` §4 for what a detached job must report.
 - **Feedback**: `.runs/journal.jsonl` with hash chaining (`tools/journal.mjs`), `tools/sanitize.mjs`,
   `tools/resumable-approval.mjs`, and `node tools/check.mjs` plus three eval matrices that report pass

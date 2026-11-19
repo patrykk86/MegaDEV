@@ -14,7 +14,7 @@ or a playbook.
 | Topic | Read |
 | :--- | :--- |
 | routing a question to a memory file | [memory/MEMORY.md](./memory/MEMORY.md) |
-| guard, loop, journal, budget, scheduler, gateway | `memory/architecture-knowledge.md` |
+| guard, loop, journal, budget, scheduler | `memory/architecture-knowledge.md` |
 | conventions, docblocks, tests, canonical tools | `memory/code-knowledge.md` |
 | verification tiers, review loop, evidence | `memory/verification-knowledge.md` |
 | secrets, approvals, redaction | `memory/security-knowledge.md` |
@@ -51,7 +51,7 @@ or a playbook.
 - The catalog is `memory/skills-knowledge.md` and `memory/CODEBASE-MAP.md`; never restate it here.
 
 ## 4. Background work
-- Never stall on a long job: `crew`, `tools/scheduler/runner.mjs`, `tools/gateway/task-bridge.mjs`. Report
+- Never stall on a long job: use `crew` or `tools/scheduler/runner.mjs`. Report
   PID, log and result path as it starts, and read the log first on the next turn.
 - Results land at `.runs/<job>/result.json`, scrubbed; open work waits behind a watcher, not a shell.
 - A workaround is a finding: file it with `node tools/friction-log.mjs`; the daily sweep marks it

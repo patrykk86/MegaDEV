@@ -8,15 +8,9 @@
 
 **MegaDEV** is an autonomous agent workspace built to eliminate common failure modes in LLM-assisted software development—such as prompt drift, hallucinated commands, unbounded retry loops, token exhaustion, and silent security leaks.
 
-The workspace operates in tandem with **BioCore-AI** (sibling workspace `../biocore_ai` or `../Projekt Hajs/biocore_ai`), maintaining a strict boundary between project dependencies while sharing skills, model bridges, and gateway services.
+The workspace operates in tandem with **BioCore-AI** (sibling workspace `../biocore_ai` or `../Projekt Hajs/biocore_ai`), maintaining a strict boundary between project dependencies while sharing skills and model bridges.
 
 ```
-                    ┌────────────────────────────────────────────────────────┐
-                    │               Mobile Telegram Gateway                  │
-                    │       (/task, /status, /approve, /reject)              │
-                    └──────────────────────────┬─────────────────────────────┘
-                                               │ (Scrubbed & Sanitized)
-                                               ▼
 ┌────────────────────────────────────────────────────────────────────────────────────────────┐
 │                                   MegaDEV Coordinator                                     │
 │                         (AGENTS.md Guarded Agent Loop & Trust Pyramid)                     │
@@ -75,7 +69,7 @@ All agents and subagents operating inside this workspace are governed by the non
 
 ### Layer 6: Layered Defense & Outbound Redaction Protocol
 * **Deterministic Input Sanitization (`tools/sanitize.mjs`)**: Untrusted external inputs (prompts, web scrapes, emails) pass through a pre-processor that strips invisible tags (`display:none`), normalizes unicode homoglyphs, decodes embedded base64/hex payloads, and neutralizes prompt injection attempts.
-* **Outbound Secret Scrubbing**: All logging, Telegram messages, and network payloads are filtered through regex masks scrubbing API keys, tokens, UUIDs, and sensitive system paths.
+* **Outbound Secret Scrubbing**: Logging and network payloads are filtered through regex masks scrubbing API keys, tokens, UUIDs, and sensitive system paths.
 * **Least Privilege**: Destructive write tools and unsandboxed commands require explicit policy authorization.
 
 ### Layer 7: Guarded Agent Loop & Lamarckian Evolution
@@ -90,7 +84,7 @@ All agents and subagents operating inside this workspace are governed by the non
 ### Layer 8: Contextual Recall & Durable Resumable Approvals
 * **Hybrid Contextual Recall (`tools/memory/contextual-recall.mjs`)**: Session handoffs and documentation are dynamically indexed and recalled using BM25-style sparse vector matching combined with markdown link/tag graph boosting.
 * **Token Budget Priority (`tools/memory/rule-budget.mjs`)**: Soft rules in memory are constrained to 20,000 tokens / 24KB. If exceeded, soft rules are demoted into an advisory manifest, preserving invariant hard rules in `AGENTS.md`.
-* **Durable Resumable Approvals (`tools/resumable-approval.mjs`)**: High-risk tool calls are serialized into HMAC-SHA256 signed suspension files (`.approvals/`), allowing safe multi-day pause and resume via Telegram or CLI without keeping live processes in memory.
+* **Durable Resumable Approvals (`tools/resumable-approval.mjs`)**: High-risk tool calls are serialized into HMAC-SHA256 signed suspension files (`.approvals/`), allowing safe multi-day pause and resume via the CLI without keeping live processes in memory.
 
 ---
 
@@ -123,22 +117,17 @@ The following foundational upgrades were designed, implemented, and verified in 
 2. **Tamper-Proof Resumable Approvals (`tools/resumable-approval.mjs`)**
    * Suspends dangerous or sensitive tool calls into an HMAC-SHA256 signed snapshot.
    * Protects against replay attacks, tampering, and TTL expiration.
-   * Enables asynchronous approval or rejection over mobile Telegram or CLI.
+   * Enables asynchronous approval or rejection via the CLI.
 
-3. **Two-Way Mobile Telegram Gateway (`tools/gateway/telegram-bot.mjs`)**
-   * Full remote command center supporting `/task`, `/status`, `/biocore`, `/journal`, `/approve`, and `/reject`.
-   * Enforces fail-closed authentication (rejects unauthorized users with zero execution).
-   * Automatically scrubs outbound secrets before messages reach Telegram servers.
-
-4. **Cryptographic Append-Only Journal (`tools/journal.mjs`)**
+3. **Cryptographic Append-Only Journal (`tools/journal.mjs`)**
    * Every major agent action, decision, and run outcome is recorded in a SHA-256 hash-chained JSONL ledger.
    * Modifying historical records immediately breaks the cryptographic chain and triggers tamper alerts.
 
-5. **Unified Background Scheduler (`tools/scheduler/runner.mjs`)**
+4. **Unified Background Scheduler (`tools/scheduler/runner.mjs`)**
    * Zero-dependency UTC cron runner executing daily 20:00 audits, memory budget checks, and lane health checks.
 
-6. **Windows Service Management Suite (`tools/service/`)**
-   * Headless VBScript and batch controllers (`start-background-services.vbs`, `health-check.mjs`) to monitor and boot both the BioCore FastAPI backend and the MegaDEV Telegram Gateway in the background.
+5. **Windows Service Management Suite (`tools/service/`)**
+   * Headless VBScript and batch controllers (`start-background-services.vbs`, `health-check.mjs`) to monitor and boot the BioCore FastAPI backend in the background.
 
 ---
 
@@ -170,7 +159,7 @@ npm run check
 
 ### Background Service Management
 ```bash
-# Check health of BioCore Backend (port 8000) and Telegram Gateway
+# Check health of BioCore Backend (port 8000)
 npm run services:check
 
 # Start services headlessly in background (VBScript launcher)
@@ -203,7 +192,6 @@ mega-dev/
 │   ├── journal.mjs        # Cryptographic hash-chained activity logger
 │   ├── resumable-approval.mjs # HMAC-SHA256 tool suspension manager
 │   ├── memory/            # Contextual recall (BM25 + graph tags) & rule budgeting
-│   ├── gateway/           # Mobile Telegram Gateway & Task Bridge
 │   ├── scheduler/         # Automated cron runner & schedule definition
 │   └── service/           # Health monitor & headless service launchers
 ├── AGENTS.md              # Invariant core operating rules

@@ -2,9 +2,7 @@
 /**
  * tools/service/health-check.mjs - Service Health Check & Background Process Monitor
  *
- * Checks health of:
- * 1. BioCore FastAPI Backend (http://127.0.0.1:8000/health)
- * 2. MegaDEV Telegram Bot Gateway
+ * Checks the BioCore FastAPI backend (http://127.0.0.1:8000/health).
  *
  * Supports --start to automatically boot missing services in the background.
  */
