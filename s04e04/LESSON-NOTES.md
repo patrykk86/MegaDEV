@@ -28,6 +28,8 @@ ordered synthetic stream and has no watcher, model call, or live inbox.
 
 ## Sources and checks
 
+- **S04E05 handoff:** The [Host Desk factory checklist](host-desk/factory/CHECKLIST.md) carries Rules 8–10 from the S04E04 solve. Audit each stored delivery result and keep the desk alive through the course verdict. The next challenge uses the factory to make a new role. Source: [accepted S04E04 debrief](https://hq.mega.dev/challenges/leave-it-running#debrief) and the student’s factory rules.
+
 - [Lesson excerpt](lesson-excerpt.md) maps the two supplied documents by line range.
 - `node tools/codebase-map.mjs --check` verifies episode discovery.
 - **Open workspace gate.** `node tools/check.mjs` was already failing before the episode
