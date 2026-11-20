@@ -42,3 +42,8 @@ node --test tools/domain-agents.test.mjs
 The default scenario run uses local heuristics. It establishes a baseline for the existing agents. The [adapted build guide](BUILD-GUIDE.md) defines the evidence still needed for the booking exercise, sealed evaluation, training and promotion. The [source map](lesson-excerpt.md) connects each step back to the supplied lesson and transcript.
 
 All six everyday scenarios and seven unit tests passed. The generated codebase map lists S04E05. The workspace static gate (`node tools/check.mjs`) remains open due to findings in earlier local artifacts and TypeScript errors in `mega-examples`.
+
+## Next time
+
+- Build one saved-state check for each [Host Desk factory rule](../s04e04/host-desk/factory/CHECKLIST.md). Use the generated role and verify its persisted effects.
+- Keep the accepted attempt pinned through owner review. Fetching the manual again opens a different attempt. Before claiming, verify that every parked refund on the accepted attempt shows an owner decision and is marked finished.
