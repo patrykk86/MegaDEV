@@ -1,5 +1,7 @@
 # S04E05 · Build guide for MegaDEV
 
+These steps are reference exercises. The [final lesson scope](LESSON-NOTES.md#final-lesson-scope) covers simple Codex dispatch.
+
 ## 1. Prove one visitor workflow locally
 
 1. Start with a synthetic guest and one stay. Give a fresh visitor the address and the goal of finding a price and placing a temporary hold. Record where it gets stuck. Add a short discovery guide such as `llms.txt` with the supported actions and their meaning, then repeat with the same task and a fresh visitor.

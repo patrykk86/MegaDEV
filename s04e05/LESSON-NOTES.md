@@ -9,7 +9,22 @@ MegaDEV already records guarded actions, runs domain-agent scenarios, and collec
 | Distillation | The [friction log](../tools/friction-log.mjs) records reproducible workarounds and routes open findings. | Group related incidents by evidence. Propose a script for repeatable work or an advisory role for recurring judgment. |
 | Optimization and governance | MegaDEV has [resumable approvals](../tools/resumable-approval.mjs), and Git identifies and preserves revisions. | Bind a passing verdict and human approval to the same candidate digest. Restore the prior revision on demand. |
 
-## First build target
+## Final lesson scope
+
+Use Codex directly for explicitly requested delegation. Keep the main conversation on
+the operator's selected model. For a bounded implementation or test task, prefer
+`gpt-6.2-sol` at Low, with Medium for harder work that needs it. For an independent
+read-only review, request `gpt-6-luna` at Max when the Codex session exposes that
+combination. If the requested model or effort is unavailable, report that to the
+operator. Give each worker the task, relevant files, access boundaries, and the
+expected result. The main session verifies the result before relying on it.
+
+This is a closeout convention for interactive Codex work. Formal review and security
+checks continue to follow [MegaDEV's existing routing policy](../.clinerules).
+The booking desk, sealed evaluator, Trainer, and promotion workflow are optional
+lesson exercises. The [build guide](BUILD-GUIDE.md) preserves their design for reference.
+
+## Reference exercise
 
 Use a synthetic booking hold in Host Desk as the exercise. A hold is temporary and moves no money. The existing desk models payout and patch-review work, so a booking store and visitor surface are additions to the exercise. Keep the store and fixtures local and synthetic while working through the steps.
 
